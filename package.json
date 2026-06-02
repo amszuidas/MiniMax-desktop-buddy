@@ -1,0 +1,13 @@
+{
+  "name": "MiniMax-desktop-buddy",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "bridge": "pnpm --filter @buddy/bridge bridge",
+    "ble-probe": "pnpm --filter @buddy/bridge ble-probe"
+  }
+}
