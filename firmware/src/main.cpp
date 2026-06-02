@@ -16,7 +16,6 @@ buddy::Vibration lastVibration = buddy::Vibration::None;
 #define RGB_PIN 32        // Grove Port A 数据脚
 #define RGB_COUNT 3       // Unit RGB 板载 3 颗
 CRGB leds[RGB_COUNT];
-buddy::Led lastLed = buddy::Led::Off;
 
 // M1 模拟状态(M2 由 BLE 取代)
 bool simConnected = true;
@@ -41,6 +40,7 @@ void renderLed(buddy::Led led, uint32_t now) {
     case buddy::Led::PinkPulse:   { uint8_t b = sin8(now / 6); fillLeds(CRGB(b, 0, b / 2)); break; }
     case buddy::Led::DarkBlue:    fillLeds(CRGB(0, 0, 60)); break;
     case buddy::Led::YellowFlash: fillLeds((now / 150) % 2 ? CRGB::Yellow : CRGB::Black); break;
+    default:                      fillLeds(CRGB::Black); break;
   }
   FastLED.show();
 }
@@ -59,12 +59,13 @@ void setup() {
 
 void loop() {
   M5.update();
+  uint32_t now = millis();
 
   // IMU 摇晃检测
   float ax, ay, az;
   if (M5.Imu.getAccel(&ax, &ay, &az)) {
-    if (shake.feed(ax, ay, az, millis())) {
-      sm.onShake(millis());
+    if (shake.feed(ax, ay, az, now)) {
+      sm.onShake(now);
     }
   }
 
@@ -72,14 +73,16 @@ void loop() {
   // BtnC 轻按:切换运行会话。
   if (M5.BtnA.wasClicked()) { simConnected = !simConnected; pushInputs(); }
   if (M5.BtnB.wasClicked()) { simPending += 1; pushInputs(); }
-  if (M5.BtnB.wasHold())    { simPending = 0; sm.onApprove(millis()); pushInputs(); }
+  if (M5.BtnB.wasHold())    { simPending = 0; sm.onApprove(now); pushInputs(); }
   if (M5.BtnC.wasClicked()) { simRunning = simRunning > 0 ? 0 : 1; pushInputs(); }
 
-  buddy::PetVisual v = sm.update(millis());
+  buddy::PetVisual v = sm.update(now);
   if (v.expression != lastExpression) {
     applyExpression(avatar, v.expression);
     lastExpression = v.expression;
   }
+  // TODO(M2): 这些 delay() 会阻塞主循环最长 ~400ms(LongBuzz),期间丢按键/IMU。
+  // 真板阶段改为非阻塞(millis 状态机或 FreeRTOS timer)。M1 无真板可接受。
   // 振动:在种类发生变化的瞬间触发一次对应节奏(避免每帧重复触发)
   if (v.vibration != lastVibration) {
     switch (v.vibration) {
@@ -91,7 +94,7 @@ void loop() {
     }
     lastVibration = v.vibration;
   }
-  renderLed(v.led, millis());
+  renderLed(v.led, now);
   delay(16);
 }
 #endif

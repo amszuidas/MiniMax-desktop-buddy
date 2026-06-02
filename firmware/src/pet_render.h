@@ -14,7 +14,7 @@ inline void applyExpression(m5avatar::Avatar& avatar, buddy::Expression e) {
     case buddy::Expression::Neutral: mapped = AE::Neutral; break;
     case buddy::Expression::Happy:   mapped = AE::Happy;   break;
     case buddy::Expression::Doubt:   mapped = AE::Doubt;   break;
-    case buddy::Expression::Dizzy:   mapped = AE::Angry;   break;  // 临时近似;M4 做螺旋眼
+    case buddy::Expression::Dizzy:   mapped = AE::Doubt;   break;  // 临时近似(与 Angry 区分);M4 做螺旋眼
     case buddy::Expression::Love:    mapped = AE::Happy;   break;  // 临时近似;M4 做爱心
     case buddy::Expression::Sad:     mapped = AE::Sad;     break;
     case buddy::Expression::Angry:   mapped = AE::Angry;   break;
