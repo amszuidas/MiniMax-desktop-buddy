@@ -11,6 +11,7 @@ Avatar avatar;
 buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
 ShakeDetector shake;
+buddy::Vibration lastVibration = buddy::Vibration::None;
 
 // M1 模拟状态(M2 由 BLE 取代)
 bool simConnected = true;
@@ -53,6 +54,17 @@ void loop() {
   if (v.expression != lastExpression) {
     applyExpression(avatar, v.expression);
     lastExpression = v.expression;
+  }
+  // 振动:在种类发生变化的瞬间触发一次对应节奏(避免每帧重复触发)
+  if (v.vibration != lastVibration) {
+    switch (v.vibration) {
+      case buddy::Vibration::Buzz:      M5.Power.setVibration(180); delay(120); M5.Power.setVibration(0); break;
+      case buddy::Vibration::DoubleTap: M5.Power.setVibration(160); delay(80);  M5.Power.setVibration(0); delay(80); M5.Power.setVibration(160); delay(80); M5.Power.setVibration(0); break;
+      case buddy::Vibration::LongBuzz:  M5.Power.setVibration(220); delay(400); M5.Power.setVibration(0); break;
+      case buddy::Vibration::Pulse:     M5.Power.setVibration(140); delay(100); M5.Power.setVibration(0); break;
+      case buddy::Vibration::None:      M5.Power.setVibration(0); break;
+    }
+    lastVibration = v.vibration;
   }
   delay(16);
 }
