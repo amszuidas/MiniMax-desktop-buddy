@@ -3,12 +3,14 @@
 #include <Avatar.h>
 #include "pet_state.h"
 #include "pet_render.h"
+#include "shake_detect.h"
 
 using namespace m5avatar;
 
 Avatar avatar;
 buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
+ShakeDetector shake;
 
 // M1 模拟状态(M2 由 BLE 取代)
 bool simConnected = true;
@@ -31,6 +33,14 @@ void setup() {
 
 void loop() {
   M5.update();
+
+  // IMU 摇晃检测
+  float ax, ay, az;
+  if (M5.Imu.getAccel(&ax, &ay, &az)) {
+    if (shake.feed(ax, ay, az, millis())) {
+      sm.onShake(millis());
+    }
+  }
 
   // BtnA 轻按:切换连接;BtnB 轻按:+1 待审批,长按:清空待审批;
   // BtnC 轻按:切换运行会话。
