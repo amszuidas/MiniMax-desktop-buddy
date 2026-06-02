@@ -50,6 +50,9 @@ pio run -e m5stack-core2 -t upload -t monitor
   reminder is an M4 polish item.
 - `Dizzy`/`Love` use the nearest built-in avatar faces (Doubt/Happy) as interim
   approximations; bespoke spiral-eyes / floating-hearts come in M4.
+- `Sad`/`Angry` faces + `deny`/`error` transients have **no trigger source in
+  M1** (src only wires shake + approve). They light up once M2/M3 feed real
+  daemon events. See `M1-followups.md`.
 
 ## Next: M2 — replace button-simulated inputs with real BLE BuddyState
 The state machine input (`buddy::PetInputs`) is already the BLE contract shape

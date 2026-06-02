@@ -116,6 +116,42 @@ void test_shake_works_even_when_disconnected() {
                     static_cast<int>(sm.update(1200).expression));
 }
 
+void test_transient_survives_millis_wraparound() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true});
+  // 在接近 uint32 上限处触发,使 until = trigger + kShakeMs 回绕过 0
+  uint32_t nearMax = 0xFFFFFFFFu - 500;  // until = nearMax + 2000 wraps to ~1499
+  sm.onShake(nearMax);
+  // now 也回绕到 0 之后的小值,仍应在窗口内 → Dizzy
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Dizzy),
+                    static_cast<int>(sm.update(1000).expression));
+  // 远超窗口后回落
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(5000).expression));
+}
+
+void test_shake_beats_error() {
+  PetStateMachine sm; sm.setInputs({.connected = true});
+  sm.onSessionError(1000);
+  sm.onShake(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Dizzy),
+                    static_cast<int>(sm.update(1200).expression));
+}
+void test_approve_beats_deny() {
+  PetStateMachine sm; sm.setInputs({.connected = true});
+  sm.onDeny(1000);
+  sm.onApprove(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Love),
+                    static_cast<int>(sm.update(1200).expression));
+}
+void test_error_beats_deny() {
+  PetStateMachine sm; sm.setInputs({.connected = true});
+  sm.onDeny(1000);
+  sm.onSessionError(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Angry),
+                    static_cast<int>(sm.update(1200).expression));
+}
+
 // ---- Unity 入口 ----
 void setUp() {}
 void tearDown() {}
@@ -134,5 +170,9 @@ int main() {
   RUN_TEST(test_shake_beats_approve_when_both_active);
   RUN_TEST(test_error_beats_approve_when_both_active);
   RUN_TEST(test_shake_works_even_when_disconnected);
+  RUN_TEST(test_transient_survives_millis_wraparound);
+  RUN_TEST(test_shake_beats_error);
+  RUN_TEST(test_approve_beats_deny);
+  RUN_TEST(test_error_beats_deny);
   return UNITY_END();
 }
