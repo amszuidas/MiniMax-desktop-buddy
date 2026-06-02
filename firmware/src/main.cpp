@@ -4,6 +4,7 @@
 #include "pet_state.h"
 #include "pet_render.h"
 #include "shake_detect.h"
+#include <FastLED.h>
 
 using namespace m5avatar;
 
@@ -12,6 +13,10 @@ buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
 ShakeDetector shake;
 buddy::Vibration lastVibration = buddy::Vibration::None;
+#define RGB_PIN 32        // Grove Port A 数据脚
+#define RGB_COUNT 3       // Unit RGB 板载 3 颗
+CRGB leds[RGB_COUNT];
+buddy::Led lastLed = buddy::Led::Off;
 
 // M1 模拟状态(M2 由 BLE 取代)
 bool simConnected = true;
@@ -24,11 +29,31 @@ void pushInputs() {
                 .pendingApprovals = simPending});
 }
 
+void fillLeds(const CRGB& c) { for (int i = 0; i < RGB_COUNT; i++) leds[i] = c; }
+
+void renderLed(buddy::Led led, uint32_t now) {
+  switch (led) {
+    case buddy::Led::Off:         fillLeds(CRGB::Black); break;
+    case buddy::Led::CyanDim:     fillLeds(CRGB(0, 40, 40)); break;
+    case buddy::Led::GreenBreath: { uint8_t b = (sin8(now / 8)); fillLeds(CRGB(0, b, 0)); break; }
+    case buddy::Led::RedBlink:    fillLeds((now / 300) % 2 ? CRGB::Red : CRGB::Black); break;
+    case buddy::Led::RainbowSpin: { fill_rainbow(leds, RGB_COUNT, (uint8_t)(now / 5), 80); break; }
+    case buddy::Led::PinkPulse:   { uint8_t b = sin8(now / 6); fillLeds(CRGB(b, 0, b / 2)); break; }
+    case buddy::Led::DarkBlue:    fillLeds(CRGB(0, 0, 60)); break;
+    case buddy::Led::YellowFlash: fillLeds((now / 150) % 2 ? CRGB::Yellow : CRGB::Black); break;
+  }
+  FastLED.show();
+}
+
 void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
   M5.Display.setBrightness(120);
   avatar.init();
+  // ⚠️ Core2 默认不给 Grove 5V 供电,必须显式打开,否则 Unit RGB 不亮
+  M5.Power.setExtOutput(true);
+  FastLED.addLeds<WS2812, RGB_PIN, GRB>(leds, RGB_COUNT);
+  FastLED.setBrightness(40);
   pushInputs();
 }
 
@@ -66,6 +91,7 @@ void loop() {
     }
     lastVibration = v.vibration;
   }
+  renderLed(v.led, millis());
   delay(16);
 }
 #endif
