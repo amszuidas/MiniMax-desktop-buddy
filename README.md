@@ -14,18 +14,26 @@ pnpm bridge      # connect to a running daemon, print state, approve via keypres
 pnpm ble-probe   # verify @abandonware/noble works on this Mac
 ```
 
+By default the bridge reads the daemon's port from `~/.mavis/daemon.port` (the
+daemon's standard data dir). For a non-default profile (e.g. a worktree daemon
+whose data dir is `~/.mavis-<profile>`), point the bridge at it:
+```bash
+BUDDY_DATA_DIR=~/.mavis-<profile> pnpm bridge   # override data dir
+BUDDY_DAEMON_PORT=15321 pnpm bridge             # or pin the port directly
+```
+
 ## M0 status (bridge, no hardware)
 
 Implemented and verified:
-- `pnpm test` — 22 unit tests (sse-parse, daemon-port, state-model, controller)
+- `pnpm test` — 25 unit tests (sse-parse, daemon-port, state-model, controller)
 - `pnpm ble-probe` — **verified**: `@abandonware/noble` reaches `poweredOn` and
   scans on this Mac (saw 274 BLE peripherals, exit 0). This retires the project's
   biggest risk — the Node+noble (B1) path for BLE transport is viable; no Swift
   fallback needed.
-- `pnpm bridge` — connects to a running MiniMax Code daemon, shows live
-  running-session / pending-approval state, approves & denies REAL tool calls
-  from the terminal (allow once / allow always / deny). *Live daemon round-trip
-  is a manual acceptance step — see below.*
+- `pnpm bridge` — **verified** end-to-end: resolves the real daemon port from
+  `~/.mavis/daemon.port`, connects over SSE, lists pending approvals, and
+  approves & denies REAL tool calls from the terminal (allow once / allow
+  always / deny).
 
 > **Known M0 limitation:** the running-session count (`r`) is derived purely from
 > SSE lifecycle events, so sessions already running when the bridge connects are

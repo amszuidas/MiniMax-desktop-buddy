@@ -4,21 +4,27 @@ import { join } from 'node:path';
 
 export const DEFAULT_DAEMON_PORT = 5321;
 
-/** Resolve the daemon's data directory the same way the daemon does (macOS-focused for M0). */
+/**
+ * Resolve the daemon's data directory. The MiniMax Code daemon writes its
+ * runtime files (daemon.port, daemon.pid, config.yaml) under `~/.mavis`
+ * (its DEFAULT_DATA_DIR; on desktop installs this is a symlink to the
+ * brand-specific dir). We mirror that default and expose BUDDY_DATA_DIR as
+ * an explicit override for non-default profiles (e.g. a worktree daemon
+ * whose data dir is `~/.mavis-<profile>`).
+ */
 export function resolveDataDir(): string {
-  if (process.env.MAVIS_DATA_DIR) return process.env.MAVIS_DATA_DIR;
-  // macOS default; Linux/Windows handled in a later milestone.
-  return join(homedir(), 'Library', 'Application Support', 'mavis');
+  if (process.env.BUDDY_DATA_DIR) return process.env.BUDDY_DATA_DIR;
+  return join(homedir(), '.mavis');
 }
 
 /**
  * Resolve the daemon TCP port. Priority:
- *   1. MAVIS_DAEMON_PORT env var (if a valid port number)
+ *   1. BUDDY_DAEMON_PORT env var (if a valid port number)
  *   2. `<dataDir>/daemon.port` file written by a running daemon
  *   3. DEFAULT_DAEMON_PORT (5321)
  */
 export function resolveDaemonPort(opts?: { dataDir?: string }): number {
-  const envPort = parsePort(process.env.MAVIS_DAEMON_PORT);
+  const envPort = parsePort(process.env.BUDDY_DAEMON_PORT);
   if (envPort !== null) return envPort;
 
   const dataDir = opts?.dataDir ?? resolveDataDir();
