@@ -1,0 +1,25 @@
+{
+  "name": "@buddy/bridge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "bridge": "tsx src/bin/bridge.ts",
+    "ble-probe": "tsx src/bin/ble-probe.ts"
+  },
+  "dependencies": {
+    "undici": "^6.21.0"
+  },
+  "optionalDependencies": {
+    "@abandonware/noble": "^1.9.2-26"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8",
+    "@types/node": "^22.10.2"
+  }
+}
