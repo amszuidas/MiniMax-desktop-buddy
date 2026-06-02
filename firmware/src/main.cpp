@@ -10,17 +10,35 @@ Avatar avatar;
 buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
 
+// M1 模拟状态(M2 由 BLE 取代)
+bool simConnected = true;
+int simRunning = 0;
+int simPending = 0;
+
+void pushInputs() {
+  sm.setInputs({.connected = simConnected,
+                .runningSessions = simRunning,
+                .pendingApprovals = simPending});
+}
+
 void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
   M5.Display.setBrightness(120);
   avatar.init();
-  // 初始:已连接空闲(M1 先给个非未连接的稳态,方便看脸;Task 5 用按键改)
-  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 0});
+  pushInputs();
 }
 
 void loop() {
   M5.update();
+
+  // BtnA 轻按:切换连接;BtnB 轻按:+1 待审批,长按:清空待审批;
+  // BtnC 轻按:切换运行会话。
+  if (M5.BtnA.wasClicked()) { simConnected = !simConnected; pushInputs(); }
+  if (M5.BtnB.wasClicked()) { simPending += 1; pushInputs(); }
+  if (M5.BtnB.wasHold())    { simPending = 0; sm.onApprove(millis()); pushInputs(); }
+  if (M5.BtnC.wasClicked()) { simRunning = simRunning > 0 ? 0 : 1; pushInputs(); }
+
   buddy::PetVisual v = sm.update(millis());
   if (v.expression != lastExpression) {
     applyExpression(avatar, v.expression);
