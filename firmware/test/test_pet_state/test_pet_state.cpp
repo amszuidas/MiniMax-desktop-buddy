@@ -73,6 +73,9 @@ void test_deny_shows_sad() {
   sm.onDeny(500);
   TEST_ASSERT_EQUAL(static_cast<int>(Expression::Sad),
                     static_cast<int>(sm.update(700).expression));
+  // 过期后回落到 idle→Neutral
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(500 + kDenyMs + 1).expression));
 }
 
 void test_error_shows_angry_with_longbuzz() {
@@ -82,6 +85,9 @@ void test_error_shows_angry_with_longbuzz() {
   PetVisual v = sm.update(100);
   TEST_ASSERT_EQUAL(static_cast<int>(Expression::Angry), static_cast<int>(v.expression));
   TEST_ASSERT_EQUAL(static_cast<int>(Vibration::LongBuzz), static_cast<int>(v.vibration));
+  // 过期后回落到 idle→Neutral
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(0 + kErrorMs + 1).expression));
 }
 
 void test_shake_beats_approve_when_both_active() {
@@ -90,6 +96,15 @@ void test_shake_beats_approve_when_both_active() {
   sm.onApprove(1000);
   sm.onShake(1000);  // 同时活跃,摇晃优先级更高
   TEST_ASSERT_EQUAL(static_cast<int>(Expression::Dizzy),
+                    static_cast<int>(sm.update(1200).expression));
+}
+
+void test_error_beats_approve_when_both_active() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true});
+  sm.onApprove(1000);
+  sm.onSessionError(1000);  // 同时活跃,Error 优先级高于 Approve
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Angry),
                     static_cast<int>(sm.update(1200).expression));
 }
 
@@ -117,6 +132,7 @@ int main() {
   RUN_TEST(test_deny_shows_sad);
   RUN_TEST(test_error_shows_angry_with_longbuzz);
   RUN_TEST(test_shake_beats_approve_when_both_active);
+  RUN_TEST(test_error_beats_approve_when_both_active);
   RUN_TEST(test_shake_works_even_when_disconnected);
   return UNITY_END();
 }

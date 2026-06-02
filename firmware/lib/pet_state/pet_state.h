@@ -12,7 +12,7 @@ enum class Expression {
   Dizzy,    // 摇晃:螺旋眼
   Love,     // 批准:飘爱心
   Sad,      // 拒绝:委屈
-  Angry,    // 会话出错:惊吓
+  Angry,    // 会话出错:生气/惊吓
 };
 
 // LED 灯效(映射到 Unit RGB)
