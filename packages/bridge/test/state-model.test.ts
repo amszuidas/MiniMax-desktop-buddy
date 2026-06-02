@@ -94,4 +94,17 @@ describe('StateModel', () => {
     // After perm_a is gone, the next id must not reuse a live mapping incorrectly.
     expect(m.requestIdFor(m.getState().a!.id)).toBe('perm_c');
   });
+
+  it('reconcile() drops approvals no longer present and frees their local id', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    m.reconcile([pending({ requestId: 'perm_a' }), pending({ requestId: 'perm_b' })]);
+    expect(m.getState().p).toBe(2);
+    // perm_a disappears from the authoritative snapshot
+    m.reconcile([pending({ requestId: 'perm_b' })]);
+    const s = m.getState();
+    expect(s.p).toBe(1);
+    expect(m.requestIdFor(1)).toBeUndefined(); // perm_a's local id 1 is freed
+    expect(m.requestIdFor(2)).toBe('perm_b');  // perm_b keeps its original id
+  });
 });

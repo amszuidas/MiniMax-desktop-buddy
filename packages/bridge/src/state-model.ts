@@ -1,6 +1,6 @@
 import type { BuddyState, DaemonEvent, PendingApproval } from './types.js';
 
-const RUNNING_DONE = new Set(['session.finish', 'session.error', 'session.abort']);
+const SESSION_END_TYPES = new Set(['session.finish', 'session.error', 'session.abort']);
 const MAX_DESC = 40;
 const MAX_LABEL = 16;
 
@@ -32,7 +32,7 @@ export class StateModel {
     const sid = typeof ev.payload.sessionId === 'string' ? ev.payload.sessionId : undefined;
     if (ev.type === 'session.start' && sid) {
       this.running.add(sid);
-    } else if (RUNNING_DONE.has(ev.type) && sid) {
+    } else if (SESSION_END_TYPES.has(ev.type) && sid) {
       this.running.delete(sid);
     } else if (ev.type === 'permission.ask') {
       this.addPending(this.eventToApproval(ev));
@@ -96,10 +96,20 @@ export class StateModel {
 
   private addPending(r: PendingApproval): void {
     if (!r.requestId || this.pending.has(r.requestId)) return;
-    const localId = this.nextLocalId;
-    this.nextLocalId = (this.nextLocalId % 255) + 1;
+    const localId = this.allocLocalId();
+    if (localId === null) return; // pool exhausted (>255 concurrent pending) — drop gracefully
     this.pending.set(r.requestId, { ...r, localId });
     this.byLocalId.set(localId, r.requestId);
+  }
+
+  /** Allocate the next free local id in 1..255, or null if all are in use. */
+  private allocLocalId(): number | null {
+    for (let i = 0; i < 255; i++) {
+      const candidate = this.nextLocalId;
+      this.nextLocalId = (this.nextLocalId % 255) + 1;
+      if (!this.byLocalId.has(candidate)) return candidate;
+    }
+    return null;
   }
 
   private removePending(requestId: string): void {
