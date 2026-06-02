@@ -1,4 +1,4 @@
-import type { BuddyState, DaemonEvent, PendingApproval } from './types.js';
+import type { BuddyState, DaemonEvent, LocalApproval, PendingApproval } from './types.js';
 
 const SESSION_END_TYPES = new Set(['session.finish', 'session.error', 'session.abort']);
 const MAX_DESC = 40;
@@ -59,6 +59,16 @@ export class StateModel {
 
   requestIdFor(localId: number): string | undefined {
     return this.byLocalId.get(localId);
+  }
+
+  /**
+   * The full, un-truncated currently-surfaced approval (first pending), or null.
+   * Unlike getState().a (which truncates for the BLE payload budget), this
+   * returns complete fields for rich consumers like the terminal UI.
+   */
+  currentApproval(): LocalApproval | null {
+    const first = this.pending.values().next();
+    return first.done ? null : first.value;
   }
 
   getState(): BuddyState {

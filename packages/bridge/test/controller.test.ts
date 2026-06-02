@@ -63,6 +63,20 @@ describe('Controller', () => {
     expect(fake.calls).toEqual([]);
   });
 
+  it('currentApproval() exposes the full un-truncated approval from the model', async () => {
+    const longInput = '/Users/me/projects/agent-archon/apps/electron/.env.zh.development';
+    const fake = makeFakeClient([
+      { requestId: 'perm_a', sessionId: 'mvs_long_session_id_123456789', toolName: 'read', ruleContents: [], toolInput: longInput },
+    ]);
+    const c = new Controller(fake.client as never, { onState: vi.fn() });
+    await c.onConnected();
+    const cur = c.currentApproval();
+    expect(cur).not.toBeNull();
+    expect(cur!.toolInput).toBe(longInput); // full, not truncated
+    expect(cur!.sessionId).toBe('mvs_long_session_id_123456789');
+    expect(cur!.localId).toBe(c.state().a!.id);
+  });
+
   it('decide() does not resolve the approval if batchReply rejects', async () => {
     const pending: PendingApproval[] = [
       { requestId: 'perm_a', sessionId: 'mvs_1', toolName: 'bash', ruleContents: [], toolInput: 'ls' },

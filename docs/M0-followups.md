@@ -12,6 +12,9 @@ reconnect. These are robustness / derived-state items to address as M1–M3 buil
   (b) events lost during an SSE drop never resync. The documented daemon contract
   exposes no sessions-snapshot endpoint. Fix: add/locate a running-sessions list
   endpoint and resync `running` alongside `listPending()` in `onConnected()`.
+  **M0 mitigation applied:** the terminal UI no longer renders the running count
+  (it stays in `state.r` for logic but is hidden) to avoid showing a wrong number.
+  Restore the display in M1 once the snapshot endpoint backs it.
 - **No liveness watchdog despite `bodyTimeout:0`/`headersTimeout:0`.** On a true
   half-open socket (laptop sleep/wake, frozen daemon, no FIN/RST) the SSE
   `for await` hangs forever → `onConnectionChange(false)` never fires → `c` stays

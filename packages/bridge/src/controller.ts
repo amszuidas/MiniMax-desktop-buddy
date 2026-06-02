@@ -1,5 +1,5 @@
 import { StateModel } from './state-model.js';
-import type { BuddyState, DaemonEvent, Decision } from './types.js';
+import type { BuddyState, DaemonEvent, Decision, LocalApproval } from './types.js';
 
 /** The subset of DaemonClient the controller depends on (for testability). */
 export interface ClientLike {
@@ -26,6 +26,11 @@ export class Controller {
 
   state(): BuddyState {
     return this.model.getState();
+  }
+
+  /** The full, un-truncated currently-surfaced approval (for rich UIs), or null. */
+  currentApproval(): LocalApproval | null {
+    return this.model.currentApproval();
   }
 
   /** Call after the SSE connection opens (or reopens). */

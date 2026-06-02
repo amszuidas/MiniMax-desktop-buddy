@@ -107,4 +107,26 @@ describe('StateModel', () => {
     expect(m.requestIdFor(1)).toBeUndefined(); // perm_a's local id 1 is freed
     expect(m.requestIdFor(2)).toBe('perm_b');  // perm_b keeps its original id
   });
+
+  it('currentApproval() returns the full, UN-truncated surfaced approval', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    const longInput = '/Users/me/projects/agent-archon/apps/electron/.env.zh.development';
+    const longSession = 'mvs_23afbfde8d3e4098bb531531d107b41a';
+    m.reconcile([pending({ requestId: 'perm_a', toolInput: longInput, sessionId: longSession })]);
+    const cur = m.currentApproval();
+    expect(cur).not.toBeNull();
+    expect(cur!.localId).toBe(1);
+    expect(cur!.toolInput).toBe(longInput); // NOT truncated (unlike getState().a.d)
+    expect(cur!.sessionId).toBe(longSession); // full session id
+    expect(cur!.toolName).toBe('bash');
+    // getState().a stays truncated for the BLE payload budget
+    expect(m.getState().a!.d.length).toBeLessThanOrEqual(40);
+  });
+
+  it('currentApproval() returns null when there are no pending approvals', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    expect(m.currentApproval()).toBeNull();
+  });
 });
