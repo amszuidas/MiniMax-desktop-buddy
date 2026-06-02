@@ -27,6 +27,11 @@ Implemented and verified:
   from the terminal (allow once / allow always / deny). *Live daemon round-trip
   is a manual acceptance step — see below.*
 
+> **Known M0 limitation:** the running-session count (`r`) is derived purely from
+> SSE lifecycle events, so sessions already running when the bridge connects are
+> not counted, and the count can drift across SSE drops. The pending-approval
+> path resyncs on every reconnect and is unaffected. See `docs/M0-followups.md`.
+
 ### Manual acceptance: live approve/deny round-trip
 With a MiniMax Code daemon running on this Mac:
 1. `pnpm bridge` → the box should show `daemon: CONNECTED` within ~2s.

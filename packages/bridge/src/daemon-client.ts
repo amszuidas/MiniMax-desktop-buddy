@@ -73,7 +73,10 @@ export class DaemonClient {
           bodyTimeout: 0,
           headersTimeout: 0,
         });
-        if (res.statusCode !== 200) throw new Error(`events: HTTP ${res.statusCode}`);
+        if (res.statusCode !== 200) {
+          res.body.destroy();
+          throw new Error(`events: HTTP ${res.statusCode}`);
+        }
         this.opts.onConnectionChange(true);
         const parser = new SSEParser();
         res.body.setEncoding('utf8');
