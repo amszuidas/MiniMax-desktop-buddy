@@ -1,16 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Controller } from '../src/controller.js';
-import type { DaemonEvent, Decision, PendingApproval } from '../src/types.js';
+import type { Decision, PendingApproval } from '../src/types.js';
 
-/** A fake client capturing batchReply calls and letting tests push events. */
+/** A fake client capturing batchReply calls for controller tests. */
 function makeFakeClient(pending: PendingApproval[] = []) {
   const calls: Array<{ ids: string[]; decision: Decision }> = [];
-  let emit: ((ev: DaemonEvent) => void) | null = null;
-  let conn: ((c: boolean) => void) | null = null;
   return {
     calls,
-    fire: (ev: DaemonEvent) => emit?.(ev),
-    setConn: (c: boolean) => conn?.(c),
     client: {
       start: vi.fn(),
       stop: vi.fn(),
@@ -19,10 +15,6 @@ function makeFakeClient(pending: PendingApproval[] = []) {
         calls.push({ ids, decision });
         return { processed: ids, skipped: [] };
       }),
-      _bind: (onEvent: (ev: DaemonEvent) => void, onConn: (c: boolean) => void) => {
-        emit = onEvent;
-        conn = onConn;
-      },
     },
   };
 }
@@ -34,7 +26,6 @@ describe('Controller', () => {
     ]);
     const onState = vi.fn();
     const c = new Controller(fake.client as never, { onState });
-    fake.client._bind = fake.client._bind; // satisfy lint
     await c.onConnected();
     expect(c.state().p).toBe(1);
     expect(c.state().c).toBe(1);
@@ -70,5 +61,24 @@ describe('Controller', () => {
     const c = new Controller(fake.client as never, { onState: vi.fn() });
     await c.decide(99, 'deny');
     expect(fake.calls).toEqual([]);
+  });
+
+  it('decide() does not resolve the approval if batchReply rejects', async () => {
+    const pending: PendingApproval[] = [
+      { requestId: 'perm_a', sessionId: 'mvs_1', toolName: 'bash', ruleContents: [], toolInput: 'ls' },
+    ];
+    const failing = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      listPending: vi.fn(async () => pending),
+      batchReply: vi.fn(async () => {
+        throw new Error('network down');
+      }),
+    };
+    const c = new Controller(failing as never, { onState: vi.fn() });
+    await c.onConnected();
+    const localId = c.state().a!.id;
+    await expect(c.decide(localId, 'allowOnce')).rejects.toThrow('network down');
+    expect(c.state().p).toBe(1);
   });
 });

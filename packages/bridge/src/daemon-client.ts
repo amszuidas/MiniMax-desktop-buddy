@@ -39,7 +39,10 @@ export class DaemonClient {
 
   async listPending(): Promise<PendingApproval[]> {
     const res = await request(`${this.base}/permission/requests`, { method: 'GET' });
-    if (res.statusCode !== 200) throw new Error(`listPending: HTTP ${res.statusCode}`);
+    if (res.statusCode !== 200) {
+      res.body.destroy();
+      throw new Error(`listPending: HTTP ${res.statusCode}`);
+    }
     const body = (await res.body.json()) as { requests: PendingApproval[] };
     return body.requests ?? [];
   }
@@ -50,7 +53,10 @@ export class DaemonClient {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ requestIds, decision }),
     });
-    if (res.statusCode !== 200) throw new Error(`batchReply: HTTP ${res.statusCode}`);
+    if (res.statusCode !== 200) {
+      res.body.destroy();
+      throw new Error(`batchReply: HTTP ${res.statusCode}`);
+    }
     const body = (await res.body.json()) as { processed: string[]; skipped: string[] };
     return { processed: body.processed ?? [], skipped: body.skipped ?? [] };
   }
