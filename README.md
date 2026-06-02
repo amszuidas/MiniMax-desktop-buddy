@@ -49,6 +49,8 @@ With a MiniMax Code daemon running on this Mac:
    `(no pending approvals)`.
 
 Next milestones (separate plans):
-- M1 firmware "pet hello" on M5Stack Core2 (avatar + buttons + IMU + RGB + vibration)
+- M1 firmware "pet hello" — **code complete** (pending on-device verification):
+  pet state machine (12 native tests) + avatar/buttons/IMU/vibration/RGB adapter
+  compiles for Core2. See `firmware/`.
 - M2 BLE GATT transport (device = peripheral, Mac = central)
 - M3 integration (real daemon state → pet animation; buttons → real approvals)
