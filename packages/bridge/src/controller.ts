@@ -1,0 +1,66 @@
+import { StateModel } from './state-model.js';
+import type { BuddyState, DaemonEvent, Decision } from './types.js';
+
+/** The subset of DaemonClient the controller depends on (for testability). */
+export interface ClientLike {
+  start(): void;
+  stop(): void;
+  listPending(): Promise<import('./types.js').PendingApproval[]>;
+  batchReply(requestIds: string[], decision: Decision): Promise<{ processed: string[]; skipped: string[] }>;
+}
+
+export interface ControllerOptions {
+  /** called whenever derived state changes */
+  onState: (state: BuddyState) => void;
+}
+
+/**
+ * Wires the daemon client to the state model. Owns the policy:
+ *  - on (re)connect, reconcile the full pending set
+ *  - on each event, update the model and emit state
+ *  - decide(localId, decision) resolves a real approval via batchReply
+ */
+export class Controller {
+  private readonly model = new StateModel();
+  constructor(private readonly client: ClientLike, private readonly opts: ControllerOptions) {}
+
+  state(): BuddyState {
+    return this.model.getState();
+  }
+
+  /** Call after the SSE connection opens (or reopens). */
+  async onConnected(): Promise<void> {
+    this.model.setConnected(true);
+    try {
+      this.model.reconcile(await this.client.listPending());
+    } catch {
+      // leave model as-is; a later event or retry will reconcile
+    }
+    this.emit();
+  }
+
+  onDisconnected(): void {
+    this.model.setConnected(false);
+    this.emit();
+  }
+
+  /** Feed a single daemon event. */
+  ingest(ev: DaemonEvent): void {
+    if (ev.type === 'heartbeat') return;
+    this.model.applyEvent(ev);
+    this.emit();
+  }
+
+  /** Resolve the approval with this local id. No-op if the id is unknown. */
+  async decide(localId: number, decision: Decision): Promise<void> {
+    const requestId = this.model.requestIdFor(localId);
+    if (!requestId) return;
+    await this.client.batchReply([requestId], decision);
+    this.model.resolve(requestId);
+    this.emit();
+  }
+
+  private emit(): void {
+    this.opts.onState(this.model.getState());
+  }
+}
