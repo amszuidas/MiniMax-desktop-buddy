@@ -64,10 +64,11 @@ constexpr uint32_t kDrowsyAfterMs = 60000;
  * 应显示的 PetVisual。瞬态优先于稳态,并在各自时长后自动回落。
  *
  * 优先级(高→低):
- *   瞬态: Shake > Error > Approve > Deny   (任一未过期则盖过稳态)
+ *   瞬态: Shake > Error > Approve > Deny > Relief   (任一未过期则盖过稳态)
  *   稳态: Disconnected > Pending>0 > Running>0 > Idle
  * 说明:Disconnected 是稳态最高(fail-safe:数据不可信时一律显示未连接);
  *      瞬态可盖过 Disconnected(摇晃是本地 IMU,断连也能玩)。
+ *      稳态额外:idle 持续 kDrowsyAfterMs 后转 Drowsy(打盹,显示 Sleepy)。
  *
  * 不依赖任何 Arduino/M5 头文件,可在 host 上单测。
  */
@@ -81,8 +82,8 @@ class PetStateMachine {
   void onSessionError(uint32_t now_ms) { errorUntil_ = now_ms + kErrorMs; }
   void onApprovalsCleared(uint32_t now_ms) { reliefUntil_ = now_ms + kReliefMs; }
 
-  // 计算当前应显示的 visual(处理瞬态衰减)。
-  PetVisual update(uint32_t now_ms) const;
+  // 计算当前应显示的 visual(处理瞬态衰减)。推进 idle 计时,有副作用,故非 const。
+  PetVisual update(uint32_t now_ms);
 
  private:
   PetInputs inputs_;
@@ -91,8 +92,8 @@ class PetStateMachine {
   uint32_t denyUntil_ = 0;
   uint32_t errorUntil_ = 0;
   uint32_t reliefUntil_ = 0;
-  mutable uint32_t idleSinceMs_ = 0;
-  mutable bool idleTracked_ = false;
+  uint32_t idleSinceMs_ = 0;
+  bool idleTracked_ = false;
 };
 
 // 每个表情对应的简短文字标签,显示在 avatar speech bubble 里。

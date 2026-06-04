@@ -253,6 +253,33 @@ void test_intensity_scales_with_running() {
   TEST_ASSERT_EQUAL_UINT8(0, sm.update(300).intensity);
 }
 
+void test_shake_resets_drowsy_timer() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 0});
+  sm.update(1000);                       // idle 计时起点 1000
+  sm.onShake(50000);                     // 用户摇晃(明确互动), shakeUntil_=52000
+  sm.update(51000);                      // 摇晃瞬态期间,复位 idleTracked_
+  // 摇晃 52000 过期;第一次回 idle 的 update(52001) 重记 idle 起点为 52001
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(52001).expression));
+  // 距 idle 重记点(52001)仅 ~9s,不足 kDrowsyAfterMs,不该打盹
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(52001 + 9000).expression)); // 摇晃后 ~9s
+  // 再等够 kDrowsyAfterMs 才打盹
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Sleepy),
+                    static_cast<int>(sm.update(52001 + kDrowsyAfterMs + 1).expression));
+}
+
+void test_intensity_exact_values_and_cap() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 1});
+  TEST_ASSERT_EQUAL_UINT8(80, sm.update(10).intensity);
+  sm.setInputs({.connected = true, .runningSessions = 3});
+  TEST_ASSERT_EQUAL_UINT8(240, sm.update(20).intensity);
+  sm.setInputs({.connected = true, .runningSessions = 5});
+  TEST_ASSERT_EQUAL_UINT8(240, sm.update(30).intensity);  // 封顶
+}
+
 // ---- Unity 入口 ----
 void setUp() {}
 void tearDown() {}
@@ -283,5 +310,7 @@ int main() {
   RUN_TEST(test_relief_transient_on_approvals_cleared);
   RUN_TEST(test_relief_yields_to_higher_transients);
   RUN_TEST(test_intensity_scales_with_running);
+  RUN_TEST(test_shake_resets_drowsy_timer);
+  RUN_TEST(test_intensity_exact_values_and_cap);
   return UNITY_END();
 }

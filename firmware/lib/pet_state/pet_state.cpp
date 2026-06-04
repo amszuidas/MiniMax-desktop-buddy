@@ -9,7 +9,7 @@ PetVisual steadyVisual(const PetInputs& in) {
   if (!in.connected) return {Expression::Sleepy, Led::Off, Vibration::None, 0};
   if (in.pendingApprovals > 0) return {Expression::Doubt, Led::RedBlink, Vibration::Pulse, 0};
   if (in.runningSessions > 0) {
-    int n = in.runningSessions > 3 ? 3 : in.runningSessions;
+    int n = in.runningSessions < 0 ? 0 : (in.runningSessions > 3 ? 3 : in.runningSessions);
     uint8_t intensity = static_cast<uint8_t>(n * 80);
     return {Expression::Happy, Led::GreenBreath, Vibration::None, intensity};
   }
@@ -24,7 +24,14 @@ bool isActive(uint32_t now_ms, uint32_t until_ms) {
 
 }  // namespace
 
-PetVisual PetStateMachine::update(uint32_t now_ms) const {
+PetVisual PetStateMachine::update(uint32_t now_ms) {
+  // 任一瞬态活跃 → 视为"有事发生",复位久置计时(用户刚互动不该立即打盹)。
+  const bool anyTransient =
+      isActive(now_ms, shakeUntil_) || isActive(now_ms, errorUntil_) ||
+      isActive(now_ms, approveUntil_) || isActive(now_ms, denyUntil_) ||
+      isActive(now_ms, reliefUntil_);
+  if (anyTransient) idleTracked_ = false;
+
   // 瞬态优先级:Shake > Error > Approve > Deny > Relief。任一未过期即盖过稳态。
   // 用有符号差值比较,使 millis() 32 位回绕(~49.7 天)时单次回绕仍正确:
   // (int32_t)(now - until) < 0 等价于 "now 在 until 之前"。
