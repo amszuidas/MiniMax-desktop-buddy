@@ -7,7 +7,7 @@ export interface ClientLike {
   stop(): void;
   listPending(): Promise<import('./types.js').PendingApproval[]>;
   batchReply(requestIds: string[], decision: Decision): Promise<{ processed: string[]; skipped: string[] }>;
-  listRunningCount(): Promise<number>;
+  getRunningCount(): Promise<number>;
 }
 
 export interface ControllerOptions {
@@ -70,7 +70,7 @@ export class Controller {
   /** Resync the running-session count from the daemon (covers sessions predating connect). */
   async syncRunning(): Promise<void> {
     try {
-      this.model.setRunningCount(await this.client.listRunningCount());
+      this.model.setRunningCount(await this.client.getRunningCount());
       this.emit();
     } catch {
       // transient; next sync will retry

@@ -32,7 +32,11 @@ export class StateModel {
   }
 
   /** Resync the running tally from an authoritative count (e.g. daemon agent scan).
-   *  Clears the event-tracked set so later lifecycle events adjust from this baseline. */
+   *  Clears the event-tracked set so later lifecycle events adjust from this baseline.
+   *  CONTRACT: callers must call this periodically. Between syncs the count drifts
+   *  one-directionally (over-count): a finish for a session that predates the sync
+   *  is not in the tracked set, so it does not decrement the baseline. The periodic
+   *  resync (see Controller.syncRunning, called on connect and on a timer) corrects it. */
   setRunningCount(n: number): void {
     this.runningBaseline = n;
     this.running.clear();
@@ -41,8 +45,9 @@ export class StateModel {
   applyEvent(ev: DaemonEvent): void {
     const sid = typeof ev.payload.sessionId === 'string' ? ev.payload.sessionId : undefined;
     if (ev.type === 'session.start' && sid) {
+      const isNew = !this.running.has(sid);
       this.running.add(sid);
-      if (this.runningBaseline !== null) this.runningBaseline += 1;
+      if (this.runningBaseline !== null && isNew) this.runningBaseline += 1;
     } else if (SESSION_END_TYPES.has(ev.type) && sid) {
       const had = this.running.delete(sid);
       if (this.runningBaseline !== null && had) this.runningBaseline = Math.max(0, this.runningBaseline - 1);

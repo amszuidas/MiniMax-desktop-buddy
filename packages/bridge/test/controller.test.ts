@@ -15,7 +15,7 @@ function makeFakeClient(pending: PendingApproval[] = []) {
         calls.push({ ids, decision });
         return { processed: ids, skipped: [] };
       }),
-      listRunningCount: vi.fn(async () => 0),
+      getRunningCount: vi.fn(async () => 0),
     },
   };
 }
@@ -89,7 +89,7 @@ describe('Controller', () => {
       batchReply: vi.fn(async () => {
         throw new Error('network down');
       }),
-      listRunningCount: vi.fn(async () => 0),
+      getRunningCount: vi.fn(async () => 0),
     };
     const c = new Controller(failing as never, { onState: vi.fn() });
     await c.onConnected();
@@ -108,11 +108,20 @@ describe('Controller', () => {
 
   it('syncRunning pulls the count from the client and updates state', async () => {
     const fake = makeFakeClient();
-    (fake.client as unknown as { listRunningCount: () => Promise<number> }).listRunningCount =
+    (fake.client as unknown as { getRunningCount: () => Promise<number> }).getRunningCount =
       async () => 4;
     let lastR = -1;
     const c = new Controller(fake.client as never, { onState: (s) => { lastR = s.r; } });
     await c.syncRunning();
     expect(lastR).toBe(4);
+  });
+
+  it('syncRunning swallows client errors (state unchanged, no throw)', async () => {
+    const fake = makeFakeClient();
+    (fake.client as unknown as { getRunningCount: () => Promise<number> }).getRunningCount =
+      async () => { throw new Error('daemon down'); };
+    const c = new Controller(fake.client as never, { onState: vi.fn() });
+    await expect(c.syncRunning()).resolves.toBeUndefined();  // no throw
+    expect(c.state().r).toBe(0);  // unchanged
   });
 });

@@ -62,7 +62,7 @@ export class DaemonClient {
   }
 
   /** Count running sessions across all agents (status.type === 'started'). */
-  async listRunningCount(): Promise<number> {
+  async getRunningCount(): Promise<number> {
     const fetcher: JsonFetcher = async (path: string) => {
       const res = await request(`${this.base}${path}`, { method: 'GET' });
       if (res.statusCode !== 200) {
@@ -124,23 +124,22 @@ export type JsonFetcher = (path: string) => Promise<unknown>;
  * injectable fetcher (pure logic; the real HTTP fetcher is provided by DaemonClient).
  * Resilient to malformed payloads — anything unexpected contributes 0.
  */
-export async function countRunningSessions(fetch: JsonFetcher): Promise<number> {
-  const agentsResp = (await fetch('/agent')) as { agents?: Array<{ name?: unknown }> };
+export async function countRunningSessions(fetcher: JsonFetcher): Promise<number> {
+  const agentsResp = (await fetcher('/agent')) as { agents?: Array<{ name?: unknown }> };
   const agents = Array.isArray(agentsResp?.agents) ? agentsResp.agents : [];
-  let count = 0;
-  for (const a of agents) {
-    if (typeof a?.name !== 'string') continue;
-    try {
-      const sresp = (await fetch(`/agent/${encodeURIComponent(a.name)}/session`)) as {
-        sessions?: Array<{ status?: { type?: unknown } }>;
-      };
-      const sessions = Array.isArray(sresp?.sessions) ? sresp.sessions : [];
-      for (const s of sessions) {
-        if (s?.status?.type === 'started') count += 1;
+  const counts = await Promise.all(
+    agents.map(async (a) => {
+      if (typeof a?.name !== 'string') return 0;
+      try {
+        const sresp = (await fetcher(`/agent/${encodeURIComponent(a.name)}/session`)) as {
+          sessions?: Array<{ status?: { type?: unknown } }>;
+        };
+        const sessions = Array.isArray(sresp?.sessions) ? sresp.sessions : [];
+        return sessions.filter((s) => s?.status?.type === 'started').length;
+      } catch {
+        return 0; // one agent's failure shouldn't break the whole count
       }
-    } catch {
-      // one agent's failure shouldn't break the whole count
-    }
-  }
-  return count;
+    }),
+  );
+  return counts.reduce((sum, n) => sum + n, 0);
 }
