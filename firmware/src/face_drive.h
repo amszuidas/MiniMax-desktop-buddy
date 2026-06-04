@@ -11,7 +11,7 @@
 //    中间值不缩放(0.05/0.3/0.4 都渲染成"完全睁开")。所以"真闭眼"只能用 0.0(Sleepy)。
 //    眼形变化(Sad 吊眼 / Angry 怒眼)靠底脸库 Expression 路由(main.cpp baseLibExpression),
 //    不靠 ratio。Dizzy 用螺旋眼(setDizzyEyes),eyeOpen 对它无效。
-// 例外:Neutral 设 eyeOpen=1.0 睁眼(autoBlink 已关,须显式睁),但不设 breath,交还库 facialLoop 自然呼吸。
+// 例外:Neutral 不设 eyeOpen,交还库 autoBlink 接管眨眼(main.cpp 在 Neutral 时开 autoBlink);也不设 breath,交还库 facialLoop 自然呼吸。
 // now 用于动态相位(晃头/抖动/弹跳)。
 inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
                       uint8_t /*intensity*/, uint32_t now) {
@@ -26,7 +26,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       break;
     }
     case buddy::Expression::Happy: {
-      avatar.setRotation(0.0f);
+      avatar.setRotation(0.03f * sinf(now / 80.0f));  // slight fast jitter (busy)
       avatar.setScale(1.0f);
       avatar.setEyeOpenRatio(1.0f);
       avatar.setMouthOpenRatio(0.2f);
@@ -50,7 +50,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       break;
     }
     case buddy::Expression::Doubt: {
-      avatar.setRotation(0.0f);
+      avatar.setRotation(0.08f);  // fixed head-tilt (curious/questioning)
       avatar.setScale(1.0f);
       avatar.setEyeOpenRatio(1.0f);
       avatar.setMouthOpenRatio(0.0f);
@@ -58,7 +58,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       break;
     }
     case buddy::Expression::Sad: {
-      avatar.setRotation(0.0f);
+      avatar.setRotation(0.05f * sinf(now / 380.0f));  // slow head-shake (no)
       avatar.setScale(1.0f);
       avatar.setEyeOpenRatio(1.0f);  // >0 so lib draws Sad droopy-eye shape (via base Expression)
       avatar.setMouthOpenRatio(0.0f);
@@ -77,7 +77,6 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
     default: {
       avatar.setRotation(0.0f);
       avatar.setScale(1.0f);
-      avatar.setEyeOpenRatio(1.0f);  // autoBlink is off, so open eyes explicitly
       avatar.setMouthOpenRatio(0.0f);
       break;
     }

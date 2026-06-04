@@ -134,12 +134,23 @@ void loop() {
   g_buddyFx.nowMs = now;
   // Drive exaggerated face params every frame (rotation/scale/eye/mouth/breath per expression).
   driveFace(avatar, v.expression, v.intensity, now);
-  // Per-expression custom eyes: spiral for Dizzy, heart for Love, else default.
-  // setEyeKind() guards against redundant swaps internally.
+  // Per-expression custom eyes: spiral for Dizzy, heart for Love, alert for
+  // Doubt, else default. setEyeKind() guards against redundant swaps internally.
   EyeKind wantEye = EyeKind::Default;
   if (v.expression == buddy::Expression::Dizzy) wantEye = EyeKind::Spiral;
   else if (v.expression == buddy::Expression::Love) wantEye = EyeKind::Heart;
+  else if (v.expression == buddy::Expression::Doubt) wantEye = EyeKind::Alert;
+  else if (v.expression == buddy::Expression::Happy) wantEye = EyeKind::Busy;
+  else if (v.expression == buddy::Expression::Sad) wantEye = EyeKind::Sad;
+  else if (v.expression == buddy::Expression::Angry) wantEye = EyeKind::Angry;
   setEyeKind(buddyFace, wantEye);
+  // Neutral restores library auto-blink for idle liveliness; every other
+  // expression owns its eyes (custom Drawable or fixed ratio), so blink stays
+  // off for them. driveFace's Neutral branch intentionally leaves eyeOpenRatio
+  // alone so the library blink task drives it.
+  static bool autoBlinkOn = false;  // matches setup()'s setIsAutoBlink(false)
+  const bool wantBlink = (v.expression == buddy::Expression::Neutral);
+  if (wantBlink != autoBlinkOn) { avatar.setIsAutoBlink(wantBlink); autoBlinkOn = wantBlink; }
   // Speech bubble text still updated (text fallback to distinguish states).
   if (v.expression != lastExpression) {
     avatar.setExpression(baseLibExpression(v.expression));

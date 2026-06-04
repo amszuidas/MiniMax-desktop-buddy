@@ -53,6 +53,9 @@ class BuddyEffect : public m5avatar::Drawable {
       case buddy::Expression::Sad:
         drawTear(spi, color, now);
         break;
+      case buddy::Expression::Angry:
+        drawAngerMark(spi, color, now);
+        break;
       default:
         break;
     }
@@ -128,7 +131,7 @@ class BuddyEffect : public m5avatar::Drawable {
     // Base positions near right side of face
     constexpr int16_t baseX[] = {288, 275, 300};
     constexpr int16_t baseY[] = {95, 105, 100};
-    constexpr int16_t baseR[] = {10, 8, 7};
+    constexpr int16_t baseR[] = {8, 6, 5};
 
     for (int i = 0; i < count; i++) {
       drawSweatDrop(spi, baseX[i], baseY[i] + yOff, baseR[i], color);
@@ -210,16 +213,19 @@ class BuddyEffect : public m5avatar::Drawable {
     float phase = (now % period) / (float)period;
     if (phase > 0.7f) return;
 
-    constexpr int16_t cx = 285;   // upper-right of face
-    constexpr int16_t topY = 30;
-    constexpr int16_t barW = 10;
+    constexpr int16_t cx = 160;   // top-center, above the face
+    constexpr int16_t topY = 8;
+    constexpr int16_t barW = 12;
     constexpr int16_t barH = 34;
+    // Bob up/down for a lively "hey, look!" motion.
+    int16_t bob = (int16_t)(5.0f * sinf(now / 130.0f));
+    int16_t y = topY + bob;
     // Vertical bar.
-    spi->fillRect(cx - barW / 2, topY, barW, barH, color);
+    spi->fillRect(cx - barW / 2, y, barW, barH, color);
     // Dot below the bar.
     constexpr int16_t gap = 12;
     constexpr int16_t dotR = barW / 2 + 1;
-    spi->fillCircle(cx, topY + barH + gap, dotR, color);
+    spi->fillCircle(cx, y + barH + gap, dotR, color);
   }
 
   // -- Tear (Sad: big teardrop sliding down) -------------------------------
@@ -236,6 +242,19 @@ class BuddyEffect : public m5avatar::Drawable {
     int16_t r = 9;                       // big drop
     // Teardrop: circle body + triangle pointing up (reuse drawSweatDrop shape).
     drawSweatDrop(spi, x, y, r, color);
+  }
+
+  // -- Anger mark (Angry: pulsing manga vein, upper-right) ------------------
+
+  static void drawAngerMark(M5Canvas* spi, uint16_t color, uint32_t now) {
+    constexpr int16_t cx = 275;
+    constexpr int16_t cy = 55;
+    int16_t r = 14 + (int16_t)(3.0f * fabsf(sinf(now / 120.0f)));  // pulse
+    // Two opposite right-angles -> a '#'-ish anger burst.
+    spi->fillRect(cx - r, cy - r, r, 4, color);
+    spi->fillRect(cx - r, cy - r, 4, r, color);
+    spi->fillRect(cx, cy, r, 4, color);
+    spi->fillRect(cx + r - 4, cy, 4, r, color);
   }
 };
 #endif

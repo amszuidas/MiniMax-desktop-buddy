@@ -6,6 +6,10 @@
 #include <Eyeblow.h>
 #include "spiral_eye.h"
 #include "heart_eye.h"
+#include "alert_eye.h"
+#include "busy_eye.h"
+#include "sad_eye.h"
+#include "angry_eye.h"
 #include "buddy_effect.h"
 
 // Custom Face assembly for buddy desktop pet.
@@ -34,11 +38,19 @@ inline SpiralEye s_spiralL;
 inline SpiralEye s_spiralR;
 inline HeartEye s_heartL;
 inline HeartEye s_heartR;
+inline AlertEye s_alertL(true);
+inline AlertEye s_alertR(false);
+inline BusyEye s_busyL;
+inline BusyEye s_busyR;
+inline SadEye s_sadL(true);
+inline SadEye s_sadR(false);
+inline AngryEye s_angryL(true);
+inline AngryEye s_angryR(false);
 inline m5avatar::Eye s_defaultEyeR(8, false);
 inline m5avatar::Eye s_defaultEyeL(8, true);
 
 // Which custom eyes are currently installed.
-enum class EyeKind { Default, Spiral, Heart };
+enum class EyeKind { Default, Spiral, Heart, Alert, Busy, Sad, Angry };
 inline EyeKind s_curEye = EyeKind::Default;
 
 // Swap eyes to the requested kind (no-op if already installed).
@@ -52,6 +64,22 @@ inline void setEyeKind(m5avatar::Face* face, EyeKind kind) {
     case EyeKind::Heart:
       face->setLeftEye(&s_heartL);
       face->setRightEye(&s_heartR);
+      break;
+    case EyeKind::Alert:
+      face->setLeftEye(&s_alertL);
+      face->setRightEye(&s_alertR);
+      break;
+    case EyeKind::Busy:
+      face->setLeftEye(&s_busyL);
+      face->setRightEye(&s_busyR);
+      break;
+    case EyeKind::Sad:
+      face->setLeftEye(&s_sadL);
+      face->setRightEye(&s_sadR);
+      break;
+    case EyeKind::Angry:
+      face->setLeftEye(&s_angryL);
+      face->setRightEye(&s_angryR);
       break;
     case EyeKind::Default:
     default:
