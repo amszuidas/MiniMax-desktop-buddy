@@ -89,7 +89,7 @@ class BuddyEffect : public m5avatar::Drawable {
       int16_t yBase = 110;
       int16_t yTop = 20;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase);
-      int16_t r = 14 + (int16_t)(6.0f * (1.0f - phase));  // shrinks as rises
+      int16_t r = 9 + (int16_t)(4.0f * (1.0f - phase));  // shrinks as rises
       drawHeart(spi, x, y, r, color);
     }
     // Heart 2: right side, 180-degree phase offset
@@ -99,7 +99,7 @@ class BuddyEffect : public m5avatar::Drawable {
       int16_t yBase = 120;
       int16_t yTop = 25;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase2);
-      int16_t r = 12 + (int16_t)(5.0f * (1.0f - phase2));
+      int16_t r = 8 + (int16_t)(3.0f * (1.0f - phase2));
       drawHeart(spi, x, y, r, color);
     }
   }

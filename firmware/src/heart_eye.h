@@ -22,11 +22,11 @@ class HeartEye : public m5avatar::Drawable {
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();
 
-    // Heartbeat: radius pulses base..base+amp. |sin| doubles the visual rate
-    // (~2 beats/s with k=150) so it reads as an excited heart.
-    constexpr float base = 18.0f;
-    constexpr float amp = 4.0f;
-    constexpr float k = 150.0f;
+    // Heartbeat: radius pulses base..base+amp. |sin| doubles the visual rate.
+    // k=260 keeps it a calm, gentle beat (not frantic).
+    constexpr float base = 14.0f;
+    constexpr float amp = 3.0f;
+    constexpr float k = 260.0f;
     int16_t r = (int16_t)(base + amp * fabsf(sinf(g_buddyFx.nowMs / k)));
 
     // The heart extends further down (tip at cy+1.207r) than up (cy-0.5r), so

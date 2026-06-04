@@ -21,7 +21,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       float bounce = 1.0f + 0.08f * fabsf(sinf(now / 120.0f));
       avatar.setScale(bounce);
       avatar.setEyeOpenRatio(1.0f);
-      avatar.setMouthOpenRatio(0.8f);
+      avatar.setMouthOpenRatio(0.5f);
       avatar.setBreath(0.0f);
       break;
     }
