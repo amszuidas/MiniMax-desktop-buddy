@@ -26,9 +26,11 @@ native 35 测试 + 编译通过;真板视觉验证待做。
 
 M4.1 只动 render 层把表情夸张,**不改状态机/切换逻辑/表情数量**。
 
-- 做了什么:`driveFace()`(`face_drive.h`)逐表情设库脸参数,主 loop 每帧调用——Dizzy/Angry 用 `setRotation` 摇头/抖动、Love 用 `setScale` 弹跳 + 大嘴(`setMouthOpenRatio`)、Sleepy `eyeOpen≈0.05` 闭眼、Doubt `eyeOpen=1.0` 瞪眼、Sad `eyeOpen=0.3` 半闭。自绘符号整体放大;Doubt 新增感叹号、Sad 新增泪滴;螺旋眼线条加粗。底脸库表情 + 标签仍按 `if (v.expression != lastExpression)` 低频设(setExpression + setSpeechText),与每帧 driveFace 并存不冲突。
-- 关键集成:setup() 在 `avatar.init()` 后调 `avatar.setIsAutoBlink(false)`,让 driveFace 全权接管 `eyeOpenRatio`。否则库 facialLoop 默认每 2.5~4.5s 自动眨眼(把 eyeOpenRatio 拍 0→1.0),会周期性顶掉 driveFace 设的固定眼态,Sleepy 闭眼/Doubt 瞪眼/Sad 半闭(本次区分表情的主力)就被破坏。
-- 关闭自动眨眼的副作用/权衡:Neutral 显式 `setEyeOpenRatio(1.0)` 保证睁眼——否则从 Sleepy(0.05)/Sad(0.3)/Dizzy(0.4) 切回时眼睛会卡在前一表情的小值("睡醒后睁不开眼")。代价=Neutral 不再有眨眼动作(恒定睁)。follow-up 可考虑只在 Neutral 临时开 autoBlink 恢复眨眼、切出 Neutral 时再关。
+- 做了什么:`driveFace()`(`face_drive.h`)逐表情设库脸参数,主 loop 每帧调用——Dizzy/Angry 用 `setRotation` 摇头/抖动、Love 用 `setScale` 弹跳 + 大嘴(`setMouthOpenRatio`)、Sleepy `eyeOpen=0.0` 真闭眼(横线)。自绘符号整体放大;Doubt 新增感叹号、Sad 新增泪滴;螺旋眼线条加粗。底脸库表情 + 标签仍按 `if (v.expression != lastExpression)` 低频设(setExpression + setSpeechText),与每帧 driveFace 并存不冲突。
+- ⚠️ 真板纠错(`eyeOpenRatio` 是二值,不是连续值):读库 `Eye::draw` 确认——`openRatio > 0` 画整只睁开的圆眼,`== 0` 才画闭眼横线,**中间值不缩放眼睛大小**(0.05/0.3/0.4 全渲染成"完全睁开")。最初设计的 Sleepy 0.05 半闭 / Doubt 1.0 瞪眼 / Sad 0.3 半闭在真板上眼睛**毫无区别**(youfang 真板验证:Sleepy 眼睛没闭上)。修复(方案 A):Sleepy 改 `0.0` 真闭眼(唯一行为变化,已真板确认闭眼);Dizzy 改 `1.0`(螺旋眼本就忽略 ratio,no-op,改成 1.0 让代码诚实);Sad 改 `1.0`(保持 >0,眼形靠底脸库 `Expression::Sad` 路由出吊眼——`Eye::draw` 对 Sad/Angry 切三角、对 Happy/Sleepy 画半月,**眼形变化靠 Expression 不靠 ratio**)。教训同 M3:外部库语义必须读消费端源码,不能只看 setter 注释。
+- 关键集成:setup() 在 `avatar.init()` 后调 `avatar.setIsAutoBlink(false)`,让 driveFace 全权接管 `eyeOpenRatio`。否则库 facialLoop 默认每 2.5~4.5s 自动眨眼(把 eyeOpenRatio 拍 0→1.0),会周期性顶掉 driveFace 设的固定眼态(Sleepy 真闭眼会被库强行睁开)。
+- 关闭自动眨眼的副作用/权衡:Neutral 显式 `setEyeOpenRatio(1.0)` 保证睁眼——否则从 Sleepy(0.0)切回时眼睛会卡在闭眼态("睡醒后睁不开眼")。代价=Neutral 不再有眨眼动作(恒定睁)。follow-up 可考虑只在 Neutral 临时开 autoBlink 恢复眨眼、切出 Neutral 时再关。
+- 待定(眼形夸张,本轮未做):Doubt 瞪眼 / Sad 半闭这类"眼睛大小连续变化"本库做不到(二值)。若要让 Sad/Doubt 眼睛也有别于 Neutral:走底脸 `Expression` 路由借库眼形(方案 B,但 Sleepy/Happy 底脸会触发库 `Effect` 自带符号→与 BuddyEffect 双画,需先解路由),或给 Sleepy 做周期开合的"打盹眨眼"(方案 C)。当前 Sad 靠吊眼底脸+大泪滴、Doubt 靠大感叹号区分,够用。
 - 已知限制 / 真板待验(📋):
   - ① breath 双线程竞争:库 facialLoop 每帧无条件 `setBreath(sin(...))`,**无 API 可关**;driveFace 每帧也写 breath(Happy 快 / Sleepy 慢 / 其余 0),两线程 last-writer-wins → breath 是最弱信号,真板看 Happy 快呼吸 / Sleepy 慢呼吸是否可感知。
   - ② Doubt 感叹号 / Sad 泪滴 与库底脸 Doubt/Sad 是否视觉重叠,真板评估。
