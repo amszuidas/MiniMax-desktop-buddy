@@ -7,6 +7,7 @@
 namespace buddy_face {
 
 inline void applyBuddyPalette(m5avatar::Avatar& avatar, buddy::Expression expr) {
+  avatar.suspend();
   buddy_render::BuddyPalette p = buddy_render::paletteFor(expr);
   m5avatar::ColorPalette cp = avatar.getColorPalette();
   cp.set(COLOR_BACKGROUND, p.background);
@@ -15,6 +16,7 @@ inline void applyBuddyPalette(m5avatar::Avatar& avatar, buddy::Expression expr) 
   cp.set(COLOR_BALLOON_BACKGROUND, p.balloonBg);
   cp.set(COLOR_BALLOON_FOREGROUND, p.balloonFg);
   avatar.setColorPalette(cp);
+  avatar.resume();
 }
 
 }  // namespace buddy_face
