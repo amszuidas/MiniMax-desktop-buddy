@@ -108,3 +108,21 @@ The pet is now driven by **real daemon state** over BLE, and device buttons make
 - Bespoke pet animations (spiral-eyes, hearts); periodic pending reminder;
   non-blocking vibration. (Optionally: daemon real-time running endpoint to revive
   the running count.)
+
+## M4 status — fun polish (verified: native + compile; on-device pending)
+- ✅ `pio test -e native` — non-blocking VibrationPlayer + Drowsy/Relief/sweat-intensity
+  state machine (35 native tests total).
+- ✅ `pio run -e m5stack-core2` — self-drawn effects compile: spiral eyes (Dizzy),
+  floating hearts (approve), sweat (running, scales with session count), Zzz (drowsy),
+  dizzy stars — all via custom Drawable + custom Face (mouth-slot overlay), base face
+  pinned to Neutral so the library's built-in Effect never double-draws.
+- ✅ Non-blocking vibration — loop never blocks on delay() during a buzz.
+- ✅ Periodic approval reminder — re-buzzes every ~6s while an approval is pending.
+
+### M4 behaviors
+- Shake → spiral eyes + dizzy stars
+- Approve → floating hearts
+- Running sessions → sweat (more sessions = more drops; SSE-only count, see M3)
+- Idle 60s → drowsy Zzz
+- Approval cleared → brief "relief" (Happy)
+- Pending approval left alone → buzzes every ~6s
