@@ -18,26 +18,26 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
   switch (e) {
     case buddy::Expression::Love: {
       avatar.setRotation(0.0f);
-      float bounce = 1.0f + 0.08f * fabsf(sinf(now / 120.0f));
+      float bounce = 1.0f + 0.10f * fabsf(sinf(now / 115.0f));
       avatar.setScale(bounce);
       avatar.setEyeOpenRatio(1.0f);
-      avatar.setMouthOpenRatio(0.5f);
+      avatar.setMouthOpenRatio(0.62f);
       avatar.setBreath(0.0f);
       break;
     }
     case buddy::Expression::Happy: {
-      avatar.setRotation(0.03f * sinf(now / 80.0f));  // slight fast jitter (busy)
-      avatar.setScale(1.0f);
+      avatar.setRotation(0.025f * sinf(now / 75.0f));
+      avatar.setScale(1.0f + 0.015f * fabsf(sinf(now / 210.0f)));
       avatar.setEyeOpenRatio(1.0f);
-      avatar.setMouthOpenRatio(0.2f);
-      avatar.setBreath(fabsf(sinf(now / 200.0f)));
+      avatar.setMouthOpenRatio(0.24f);
+      avatar.setBreath(fabsf(sinf(now / 190.0f)));
       break;
     }
     case buddy::Expression::Dizzy: {
       avatar.setScale(1.0f);
-      avatar.setRotation(0.15f * sinf(now / 150.0f));
-      avatar.setEyeOpenRatio(1.0f);  // spiral eyes ignore ratio; keep open (no-op)
-      avatar.setMouthOpenRatio(0.3f);
+      avatar.setRotation(0.18f * sinf(now / 135.0f));
+      avatar.setEyeOpenRatio(1.0f);
+      avatar.setMouthOpenRatio(0.38f);
       avatar.setBreath(0.0f);
       break;
     }
@@ -50,7 +50,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       break;
     }
     case buddy::Expression::Doubt: {
-      avatar.setRotation(0.08f);  // fixed head-tilt (curious/questioning)
+      avatar.setRotation(0.075f + 0.018f * sinf(now / 220.0f));
       avatar.setScale(1.0f);
       avatar.setEyeOpenRatio(1.0f);
       avatar.setMouthOpenRatio(0.0f);
@@ -58,18 +58,18 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
       break;
     }
     case buddy::Expression::Sad: {
-      avatar.setRotation(0.05f * sinf(now / 380.0f));  // slow head-shake (no)
-      avatar.setScale(1.0f);
-      avatar.setEyeOpenRatio(1.0f);  // >0 so lib draws Sad droopy-eye shape (via base Expression)
+      avatar.setRotation(0.055f * sinf(now / 420.0f));
+      avatar.setScale(0.98f);
+      avatar.setEyeOpenRatio(1.0f);
       avatar.setMouthOpenRatio(0.0f);
       avatar.setBreath(0.0f);
       break;
     }
     case buddy::Expression::Angry: {
-      avatar.setScale(1.0f);
-      avatar.setRotation(0.05f * sinf(now / 40.0f));
+      avatar.setScale(1.0f + 0.025f * fabsf(sinf(now / 65.0f)));
+      avatar.setRotation(0.065f * sinf(now / 38.0f));
       avatar.setEyeOpenRatio(1.0f);
-      avatar.setMouthOpenRatio(0.4f);
+      avatar.setMouthOpenRatio(0.48f);
       avatar.setBreath(0.0f);
       break;
     }
