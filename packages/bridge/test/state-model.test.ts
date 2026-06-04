@@ -152,4 +152,17 @@ describe('StateModel', () => {
     m.applyEvent({ type: 'session.error', timestamp: 1000, source: 's', payload: { sessionId: 'mvs_1', error: 'x' } });
     expect(m.getState().e).toBeUndefined();  // no-arg callers never see the transient flag
   });
+
+  it('setRunningCount overrides the running tally (resync from authoritative source)', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    m.applyEvent({ type: 'session.start', timestamp: 1, source: 's', payload: { sessionId: 'mvs_1' } });
+    expect(m.getState().r).toBe(1);
+    m.setRunningCount(5);
+    expect(m.getState().r).toBe(5);
+    m.applyEvent({ type: 'session.finish', timestamp: 2, source: 's', payload: { sessionId: 'mvs_1' } });
+    // mvs_1 was cleared from the event set by setRunningCount, so this finish
+    // for an unknown id leaves the resynced baseline untouched.
+    expect(m.getState().r).toBe(5);
+  });
 });

@@ -25,17 +25,27 @@ export class StateModel {
   private byLocalId = new Map<number, string>();
   private nextLocalId = 1;
   private errorUntil = 0;
+  private runningBaseline: number | null = null;
 
   setConnected(c: boolean): void {
     this.connected = c;
+  }
+
+  /** Resync the running tally from an authoritative count (e.g. daemon agent scan).
+   *  Clears the event-tracked set so later lifecycle events adjust from this baseline. */
+  setRunningCount(n: number): void {
+    this.runningBaseline = n;
+    this.running.clear();
   }
 
   applyEvent(ev: DaemonEvent): void {
     const sid = typeof ev.payload.sessionId === 'string' ? ev.payload.sessionId : undefined;
     if (ev.type === 'session.start' && sid) {
       this.running.add(sid);
+      if (this.runningBaseline !== null) this.runningBaseline += 1;
     } else if (SESSION_END_TYPES.has(ev.type) && sid) {
-      this.running.delete(sid);
+      const had = this.running.delete(sid);
+      if (this.runningBaseline !== null && had) this.runningBaseline = Math.max(0, this.runningBaseline - 1);
       // session.error lights a transient error flag for the device's Angry face.
       // Successive errors reset the window; only the latest matters.
       if (ev.type === 'session.error') this.errorUntil = ev.timestamp + ERROR_FLAG_MS;
@@ -89,7 +99,7 @@ export class StateModel {
     const state: BuddyState = {
       v: 1,
       c: this.connected ? 1 : 0,
-      r: this.running.size,
+      r: this.runningBaseline ?? this.running.size,
       p: this.pending.size,
       a,
     };

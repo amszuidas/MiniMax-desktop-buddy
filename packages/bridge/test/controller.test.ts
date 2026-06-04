@@ -15,6 +15,7 @@ function makeFakeClient(pending: PendingApproval[] = []) {
         calls.push({ ids, decision });
         return { processed: ids, skipped: [] };
       }),
+      listRunningCount: vi.fn(async () => 0),
     },
   };
 }
@@ -88,6 +89,7 @@ describe('Controller', () => {
       batchReply: vi.fn(async () => {
         throw new Error('network down');
       }),
+      listRunningCount: vi.fn(async () => 0),
     };
     const c = new Controller(failing as never, { onState: vi.fn() });
     await c.onConnected();
@@ -102,5 +104,15 @@ describe('Controller', () => {
     const c = new Controller(fake.client as never, { onState: (s) => states.push(s) });
     c.ingest({ type: 'session.error', timestamp: Date.now(), source: 's', payload: { sessionId: 'mvs_1', error: 'boom' } });
     expect(states.some((s) => s.e === 1)).toBe(true);
+  });
+
+  it('syncRunning pulls the count from the client and updates state', async () => {
+    const fake = makeFakeClient();
+    (fake.client as unknown as { listRunningCount: () => Promise<number> }).listRunningCount =
+      async () => 4;
+    let lastR = -1;
+    const c = new Controller(fake.client as never, { onState: (s) => { lastR = s.r; } });
+    await c.syncRunning();
+    expect(lastR).toBe(4);
   });
 });
