@@ -82,22 +82,29 @@ The pet is now driven by **real daemon state** over BLE, and device buttons make
   reflects live running-session count, and pressing the device button actually
   approved/denied real MiniMax Code tool calls.
 
-## Known M2 limitations (see M2-followups.md)
-- Connects by advertised name `MmxBuddy`; no BLE bonding/whitelist yet (M3).
-- `error` (Angry) face still has no trigger — needs the M0 bridge to expose
-  `session.error` over the contract first.
-- No state re-push on BLE (re)connect: after an idle reconnect (Mac sleep/wake,
-  device out of range), the pet can sit on `zzz` until the next non-heartbeat
-  daemon event. M3 adds a BleLink onConnect → re-push.
-- No explicit MTU negotiation: `approve`/`always` events rely on the central
-  negotiating a large MTU (macOS does); at the default 23-byte MTU they would be
-  truncated. M3 sets an explicit MTU + switches Event to acknowledged indications.
-- `running` count only reflects sessions that start *after* the bridge connects
-  (inherited M0 drift); not resynced on connect. M3 adds a running-sessions snapshot.
-- noble link has no reconnect backoff; `stop()` doesn't disconnect the peripheral
-  (SIGINT→exit covers it for now). See M2-followups.md.
+## M3 status — hardening (verified on hardware 2026-06-04)
+- ✅ **BLE encryption (Just Works bonding + encrypted chars)** — connects encrypted; verified.
+- ✅ **State re-push on BLE (re)connect** — pet no longer sits on `zzz` after an idle
+  reconnect; verified.
+- ✅ **Approval events via indication** (acknowledged, more reliable than notify) — verified.
+- ⏭️ **`session.error` → Angry face** — code + native tests in place; not triggered
+  during testing (hard to force a real daemon error). Will show on a natural error.
+- ❌ **running-count resync — dropped (architecture doesn't support it).** A bridge-side
+  aggregation over `GET /agent` + per-agent session lists was tried and reverted: the
+  daemon's list API only returns persisted `status` (always `finished`), and the
+  real "running" signal lives in daemon memory (`hasActiveTurn`) with **no external
+  HTTP exposure**. So `running` is SSE-event-only: accurate for sessions that start
+  *after* the bridge connects, blind to sessions already running at connect time.
+  A real fix needs a new daemon endpoint (cross-repo). See `M3-followups.md`.
 
-## Next: M3 / M4
-- M3: harden — BLE bonding + device whitelist; reconnect backoff; session.error path.
-- M4: bespoke pet animations (spiral-eyes, hearts); periodic pending reminder;
-  non-blocking vibration.
+## Remaining limitations (see M3-followups.md)
+- `running` blind to pre-connect sessions (above) — needs a daemon real-time endpoint.
+- No BLE device whitelist (NimBLE 1.4 whitelist bug for bonded peers); rely on
+  bonding + encrypted chars. Indication encryption is inherited from the bonded
+  link, not per-characteristic — unbonded-client secrecy is a pending board test.
+- noble link has no reconnect backoff; `stop()` doesn't disconnect the peripheral.
+
+## Next: M4
+- Bespoke pet animations (spiral-eyes, hearts); periodic pending reminder;
+  non-blocking vibration. (Optionally: daemon real-time running endpoint to revive
+  the running count.)
