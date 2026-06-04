@@ -75,7 +75,7 @@ void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
   M5.Display.setBrightness(120);
-  avatar.init();
+  avatar.init(buddy_render::kAvatarColorDepth);
   avatar.setIsAutoBlink(false);  // driveFace owns eyeOpenRatio (Sleepy/Doubt/Sad need fixed eyes)
   buddyFace = makeBuddyFace();
   avatar.setFace(buddyFace);

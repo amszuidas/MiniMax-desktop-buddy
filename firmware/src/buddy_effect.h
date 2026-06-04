@@ -7,10 +7,11 @@
 #include "buddy_palette.h"
 
 // BuddyEffect -- a composite Drawable that:
-//   1) Delegates to the real Mouth so the mouth is never lost.
-//   2) Overlays per-expression symbols (hearts, sweat drops, Zzz, stars)
-//      on top, using absolute sprite coordinates (the spi canvas is the
-//      full 320x240 face sprite).
+//   1) Draws the per-expression mood backdrop and face panel.
+//   2) Delegates to the real Mouth so the mouth is never lost.
+//   3) Overlays per-expression symbols (hearts, sweat drops, Zzz, stars)
+//      using absolute sprite coordinates (the spi canvas is the full 320x240
+//      face sprite).  The library draws eyes/eyebrows after this mouth slot.
 //
 // Installed via Face::setMouth() to piggyback on the mouth drawing slot.
 // This is the cleanest integration path: the library's Face has no

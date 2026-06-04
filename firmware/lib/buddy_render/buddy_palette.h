@@ -6,6 +6,8 @@
 
 namespace buddy_render {
 
+constexpr int kAvatarColorDepth = 16;
+
 struct BuddyPalette {
   uint16_t background;
   uint16_t backgroundAlt;

@@ -4,10 +4,15 @@
 using buddy::Expression;
 using buddy_render::BuddyPalette;
 using buddy_render::blend565;
+using buddy_render::kAvatarColorDepth;
 using buddy_render::paletteFor;
 using buddy_render::rgb565;
 using buddy_render::sweatCountForIntensity;
 using buddy_render::triWave8;
+
+void test_avatar_color_depth_supports_rgb_palettes() {
+  TEST_ASSERT_EQUAL(16, kAvatarColorDepth);
+}
 
 void test_rgb565_known_values() {
   TEST_ASSERT_EQUAL_UINT16(0x0000, rgb565(0, 0, 0));
@@ -67,6 +72,7 @@ void tearDown() {}
 
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_avatar_color_depth_supports_rgb_palettes);
   RUN_TEST(test_rgb565_known_values);
   RUN_TEST(test_all_expression_backgrounds_are_colorful);
   RUN_TEST(test_pending_and_error_palettes_are_distinct);

@@ -20,10 +20,11 @@
 //     SpiralEye instances (Dizzy), the HeartEye instances (Love), or restores
 //     the default library Eye instances (everything else).
 //
-//   - Overlay effects (hearts / sweat / Zzz / stars): the library Face has no
-//     setEffect().  addTask() gives no canvas access.  So we use the Mouth slot
-//     via Face::setMouth(): BuddyEffect wraps the real Mouth Drawable, draws
-//     the mouth first, then overlays effect symbols.  The mouth is never lost.
+//   - Mood/effect layer (colored backdrop / hearts / sweat / Zzz / stars): the
+//     library Face has no setEffect(), and addTask() gives no canvas access.  So
+//     we use the Mouth slot via Face::setMouth(): BuddyEffect draws the mood
+//     backdrop, delegates the real Mouth, then overlays effect symbols.  The
+//     library draws eyes/eyebrows after the mouth slot, so the face stays crisp.
 //
 // All custom Drawables read animation state from the global g_buddyFx struct.
 
