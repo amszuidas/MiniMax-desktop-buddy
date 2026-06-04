@@ -36,6 +36,7 @@ async function main(): Promise<void> {
   });
 
   adapter.bind();
+  // BLE device (re)connected — distinct from the daemon SSE onConnectionChange above.
   ble.onConnect(() => {
     void controller.syncRunning();            // refresh running count on (re)connect
     adapter.handleState(controller.state());  // push current state immediately
