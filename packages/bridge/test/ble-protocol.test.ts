@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BLE_UUIDS, BLE_DEVICE_NAME, encodeState, decodeEvent } from '../src/ble-protocol.js';
+import { BLE_UUIDS, BLE_DEVICE_NAME, encodeState, decodeEvent, eventToDecision } from '../src/ble-protocol.js';
 import type { BuddyState } from '../src/types.js';
 
 describe('BLE protocol', () => {
@@ -27,6 +27,19 @@ describe('BLE protocol', () => {
     expect(parsed).toEqual({ v: 1, c: 1, r: 0, p: 0, a: null });
   });
 
+  it('encodeState byte-caps oversized approval fields to stay within MTU', () => {
+    const state: BuddyState = {
+      v: 1, c: 1, r: 0, p: 1,
+      a: { id: 1, t: 'x'.repeat(100), d: 'y'.repeat(300), s: 'z'.repeat(100) },
+    };
+    const buf = encodeState(state);
+    expect(buf.length).toBeLessThanOrEqual(180);
+    // still valid JSON with the expected shape
+    const parsed = JSON.parse(buf.toString('utf8'));
+    expect(parsed.a.id).toBe(1);
+    expect(typeof parsed.a.d).toBe('string');
+  });
+
   it('decodeEvent parses approve/always/deny with id', () => {
     expect(decodeEvent(Buffer.from('{"ev":"approve","id":7}', 'utf8'))).toEqual({ ev: 'approve', id: 7 });
     expect(decodeEvent(Buffer.from('{"ev":"always","id":3}', 'utf8'))).toEqual({ ev: 'always', id: 3 });
@@ -37,10 +50,13 @@ describe('BLE protocol', () => {
     expect(decodeEvent(Buffer.from('not json', 'utf8'))).toBeNull();
     expect(decodeEvent(Buffer.from('{"ev":"bogus","id":1}', 'utf8'))).toBeNull();
     expect(decodeEvent(Buffer.from('{"ev":"approve"}', 'utf8'))).toBeNull();
+    expect(decodeEvent(Buffer.from('{"ev":"approve","id":1.5}', 'utf8'))).toBeNull();   // float id
+    expect(decodeEvent(Buffer.from('{"ev":"approve","id":"7"}', 'utf8'))).toBeNull();   // string id
+    expect(decodeEvent(Buffer.from('{"ev":"approve","id":0}', 'utf8'))).toBeNull();     // out of 1..255
+    expect(decodeEvent(Buffer.from('{"ev":"approve","id":300}', 'utf8'))).toBeNull();   // out of 1..255
   });
 
-  it('eventToDecision maps ev → daemon Decision', async () => {
-    const { eventToDecision } = await import('../src/ble-protocol.js');
+  it('eventToDecision maps ev → daemon Decision', () => {
     expect(eventToDecision('approve')).toBe('allowOnce');
     expect(eventToDecision('always')).toBe('allowAlways');
     expect(eventToDecision('deny')).toBe('deny');
