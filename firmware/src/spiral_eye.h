@@ -36,7 +36,7 @@ class SpiralEye : public m5avatar::Drawable {
       int16_t px = cx + (int16_t)(r * cosf(angle));
       int16_t py = cy + (int16_t)(r * sinf(angle));
       // dot radius tapers from 3 at center to 2 at edge
-      int16_t dotR = (i < steps / 2) ? 3 : 2;
+      int16_t dotR = (i < steps / 2) ? 4 : 3;
       spi->fillCircle(px, py, dotR, color);
     }
   }

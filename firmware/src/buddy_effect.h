@@ -47,6 +47,12 @@ class BuddyEffect : public m5avatar::Drawable {
       case buddy::Expression::Dizzy:
         drawDizzyStars(spi, color, now);
         break;
+      case buddy::Expression::Doubt:
+        drawAlertMark(spi, color, now);
+        break;
+      case buddy::Expression::Sad:
+        drawTear(spi, color, now);
+        break;
       default:
         break;
     }
@@ -80,20 +86,20 @@ class BuddyEffect : public m5avatar::Drawable {
     // Heart 1: left side, offset by 0
     {
       int16_t x = 270;
-      int16_t yBase = 100;
-      int16_t yTop = 30;
+      int16_t yBase = 110;
+      int16_t yTop = 20;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase);
-      int16_t r = 8 + (int16_t)(4.0f * (1.0f - phase));  // shrinks as rises
+      int16_t r = 14 + (int16_t)(6.0f * (1.0f - phase));  // shrinks as rises
       drawHeart(spi, x, y, r, color);
     }
     // Heart 2: right side, 180-degree phase offset
     {
       float phase2 = fmodf(phase + 0.5f, 1.0f);
       int16_t x = 290;
-      int16_t yBase = 110;
-      int16_t yTop = 40;
+      int16_t yBase = 120;
+      int16_t yTop = 25;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase2);
-      int16_t r = 6 + (int16_t)(3.0f * (1.0f - phase2));
+      int16_t r = 12 + (int16_t)(5.0f * (1.0f - phase2));
       drawHeart(spi, x, y, r, color);
     }
   }
@@ -122,7 +128,7 @@ class BuddyEffect : public m5avatar::Drawable {
     // Base positions near right side of face
     constexpr int16_t baseX[] = {288, 275, 300};
     constexpr int16_t baseY[] = {95, 105, 100};
-    constexpr int16_t baseR[] = {6, 5, 4};
+    constexpr int16_t baseR[] = {10, 8, 7};
 
     for (int i = 0; i < count; i++) {
       drawSweatDrop(spi, baseX[i], baseY[i] + yOff, baseR[i], color);
@@ -154,7 +160,7 @@ class BuddyEffect : public m5avatar::Drawable {
       float p = fmodf(phase + i * 0.33f, 1.0f);
       int16_t x = 270 + (int16_t)(p * 30.0f) + i * 8;
       int16_t y = 60 - (int16_t)(p * 40.0f);
-      int16_t sz = 8 + i * 3;  // larger Zs further out
+      int16_t sz = 14 + i * 4;  // larger Zs further out
       // Fade by skipping draw when near cycle end
       if (p < 0.85f) {
         drawZ(x, y, sz);
@@ -178,21 +184,58 @@ class BuddyEffect : public m5avatar::Drawable {
 
   // Stars orbit around the head area.
   static void drawDizzyStars(M5Canvas* spi, uint16_t color, uint32_t now) {
-    constexpr uint32_t period = 2000;
+    constexpr uint32_t period = 1400;
     float phase = (now % period) / (float)period * 2.0f * M_PI;
 
     // Orbit center roughly above the face center, three stars 120 degrees apart
     constexpr int16_t orbitCx = 160;
     constexpr int16_t orbitCy = 45;
-    constexpr int16_t orbitR = 55;
+    constexpr int16_t orbitR = 70;
 
     for (int i = 0; i < 3; i++) {
       float angle = phase + i * (2.0f * M_PI / 3.0f);
       int16_t sx = orbitCx + (int16_t)(orbitR * cosf(angle));
       int16_t sy = orbitCy + (int16_t)((orbitR * 0.4f) * sinf(angle));  // elliptical
-      int16_t r = 5 + (i % 2);  // slight size variation
+      int16_t r = 8 + (i % 2);  // slight size variation
       drawStar(spi, sx, sy, r, color);
     }
+  }
+
+  // -- Alert mark (Doubt: big exclamation) ---------------------------------
+
+  // A big exclamation mark drawn at the upper-right of the face, blinking.
+  static void drawAlertMark(M5Canvas* spi, uint16_t color, uint32_t now) {
+    // Blink: visible ~70% of a 700ms cycle.
+    constexpr uint32_t period = 700;
+    float phase = (now % period) / (float)period;
+    if (phase > 0.7f) return;
+
+    constexpr int16_t cx = 285;   // upper-right of face
+    constexpr int16_t topY = 30;
+    constexpr int16_t barW = 10;
+    constexpr int16_t barH = 34;
+    // Vertical bar.
+    spi->fillRect(cx - barW / 2, topY, barW, barH, color);
+    // Dot below the bar.
+    constexpr int16_t gap = 12;
+    constexpr int16_t dotR = barW / 2 + 1;
+    spi->fillCircle(cx, topY + barH + gap, dotR, color);
+  }
+
+  // -- Tear (Sad: big teardrop sliding down) -------------------------------
+
+  // A big teardrop sliding down from the eye corner, looping.
+  static void drawTear(M5Canvas* spi, uint16_t color, uint32_t now) {
+    constexpr uint32_t period = 1800;
+    float phase = (now % period) / (float)period;  // 0..1
+
+    constexpr int16_t x = 110;          // left-eye corner area
+    constexpr int16_t yTop = 120;
+    constexpr int16_t yBot = 200;
+    int16_t y = yTop + (int16_t)((yBot - yTop) * phase);
+    int16_t r = 9;                       // big drop
+    // Teardrop: circle body + triangle pointing up (reuse drawSweatDrop shape).
+    drawSweatDrop(spi, x, y, r, color);
   }
 };
 #endif

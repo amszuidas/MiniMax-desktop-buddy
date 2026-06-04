@@ -58,8 +58,9 @@ void renderLed(buddy::Led led, uint32_t now) {
   FastLED.show();
 }
 
-// 底脸库表情:Love/Happy/Dizzy/Sleepy 用 Neutral(符号由 BuddyEffect 自绘,避免库 Effect 双画);
-// Sad/Angry/Doubt 用库对应表情(BuddyEffect 对它们 noop,不会双画),保住这三个状态的可读性。
+// 底脸库表情:Love/Happy/Dizzy/Sleepy 用 Neutral(符号由 BuddyEffect 自绘);
+// Sad/Angry/Doubt 用库对应表情保住可读性。注:Doubt/Sad 现在 BuddyEffect 也叠了
+// 感叹号/泪滴符号(Angry 仍靠库脸),与库底脸是否视觉重叠待真板评估(见 M4-notes)。
 m5avatar::Expression baseLibExpression(buddy::Expression e) {
   switch (e) {
     case buddy::Expression::Sad:   return m5avatar::Expression::Sad;
