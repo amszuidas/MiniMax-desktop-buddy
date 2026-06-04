@@ -6,7 +6,7 @@
 
 // 逐表情把 avatar 的脸参数推到夸张:睁眼/闭眼/张嘴/晃头/弹跳。
 // 每帧调用。每个表情都设"全套"参数(含正常值),所以切换天然复位,不会卡变形态。
-// 例外:Neutral 不覆盖 eyeOpen/breath,交还库的自动眨眼+呼吸。
+// 例外:Neutral 设 eyeOpen=1.0 睁眼(autoBlink 已关,须显式睁),但不设 breath,交还库 facialLoop 自然呼吸。
 // now 用于动态相位(晃头/抖动/弹跳)。
 inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
                       uint8_t /*intensity*/, uint32_t now) {
@@ -72,6 +72,7 @@ inline void driveFace(m5avatar::Avatar& avatar, buddy::Expression e,
     default: {
       avatar.setRotation(0.0f);
       avatar.setScale(1.0f);
+      avatar.setEyeOpenRatio(1.0f);  // autoBlink is off, so open eyes explicitly
       avatar.setMouthOpenRatio(0.0f);
       break;
     }

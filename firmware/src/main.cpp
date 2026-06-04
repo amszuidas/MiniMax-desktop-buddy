@@ -75,6 +75,7 @@ void setup() {
   M5.begin(cfg);
   M5.Display.setBrightness(120);
   avatar.init();
+  avatar.setIsAutoBlink(false);  // driveFace owns eyeOpenRatio (Sleepy/Doubt/Sad need fixed eyes)
   buddyFace = makeBuddyFace();
   avatar.setFace(buddyFace);
   // base lib expression is set per-frame in loop() (see baseLibExpression)
@@ -132,6 +133,8 @@ void loop() {
   g_buddyFx.expr = v.expression;
   g_buddyFx.intensity = v.intensity;
   g_buddyFx.nowMs = now;
+  // Drive exaggerated face params every frame (rotation/scale/eye/mouth/breath per expression).
+  driveFace(avatar, v.expression, v.intensity, now);
   // Dizzy enter/exit: swap to spiral eyes (only on change).
   const bool wantDizzy = (v.expression == buddy::Expression::Dizzy);
   if (wantDizzy != dizzyEyesOn) { setDizzyEyes(buddyFace, wantDizzy); dizzyEyesOn = wantDizzy; }
