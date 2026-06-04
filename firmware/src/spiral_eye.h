@@ -3,6 +3,7 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // SpiralEye -- replaces the default Eye Drawable when Dizzy.
 // Draws an Archimedean spiral that rotates over time using g_buddyFx.nowMs.
@@ -13,9 +14,11 @@ class SpiralEye : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
+    (void)ctx;
+    buddy_render::BuddyPalette p =
+        buddy_render::paletteFor(buddy::Expression::Dizzy);
+    uint16_t color = p.accent;
+    uint16_t color2 = p.accent2;
 
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();
@@ -37,7 +40,7 @@ class SpiralEye : public m5avatar::Drawable {
       int16_t py = cy + (int16_t)(r * sinf(angle));
       // dot radius tapers from 3 at center to 2 at edge
       int16_t dotR = (i < steps / 2) ? 4 : 3;
-      spi->fillCircle(px, py, dotR, color);
+      spi->fillCircle(px, py, dotR, (i % 2 == 0) ? color : color2);
     }
   }
 };

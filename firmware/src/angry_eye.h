@@ -3,6 +3,7 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // AngryEye -- Angry(error). Staring eye + fierce brow (inner-low / outer-high)
 // pressing down on the inner corner. Pairs with the anger mark + face shake.
@@ -13,19 +14,19 @@ class AngryEye : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
-    uint16_t bg = ctx->getColorDepth() == 1
-                      ? 0
-                      : ctx->getColorPalette()->get(COLOR_BACKGROUND);
+    (void)ctx;
+    buddy_render::BuddyPalette p =
+        buddy_render::paletteFor(buddy::Expression::Angry);
+    uint16_t color = p.primary;
+    uint16_t bg = p.face;
+    uint16_t pupil = p.secondary;
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();
 
     constexpr int16_t eyeR = 16;
     spi->fillCircle(cx, cy, eyeR, color);
     spi->fillCircle(cx, cy, eyeR - 3, bg);
-    spi->fillCircle(cx, cy, 6, color);  // staring pupil centered
+    spi->fillCircle(cx, cy, 6, pupil);  // staring pupil centered
     // Fierce brow: inner-low / outer-high (mirrored), thick.
     constexpr int16_t browLen = 28;
     constexpr int16_t browY = 20;

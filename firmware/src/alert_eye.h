@@ -3,6 +3,7 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // AlertEye -- replaces the default Eye Drawable when Doubt (approval pending).
 // A wide alert eye: large open eye with a small pupil that subtly pulses, plus a
@@ -16,12 +17,12 @@ class AlertEye : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
-    uint16_t bg = ctx->getColorDepth() == 1
-                      ? 0
-                      : ctx->getColorPalette()->get(COLOR_BACKGROUND);
+    (void)ctx;
+    buddy_render::BuddyPalette p =
+        buddy_render::paletteFor(buddy::Expression::Doubt);
+    uint16_t color = p.primary;
+    uint16_t bg = p.face;
+    uint16_t pupil = p.accent;
 
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();
@@ -33,7 +34,7 @@ class AlertEye : public m5avatar::Drawable {
     spi->fillCircle(cx, cy, eyeR - 3, bg);         // white of the eye
     // Pupil pulses small<->slightly-bigger so it feels alert/alive.
     int16_t pupilR = 6 + (int16_t)(2.0f * fabsf(sinf(g_buddyFx.nowMs / 280.0f)));
-    spi->fillCircle(cx, cy, pupilR, color);
+    spi->fillCircle(cx, cy, pupilR, pupil);
 
     // Slanted brow line above the eye: inner end high, outer end low (frown).
     // Mirror by isLeft so both brows tilt toward the face center.

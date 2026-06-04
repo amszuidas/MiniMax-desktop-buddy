@@ -3,6 +3,7 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // HeartEye -- replaces the default Eye Drawable when Love.
 // Draws a solid heart that pulses ("heartbeat") over time using g_buddyFx.nowMs.
@@ -15,9 +16,10 @@ class HeartEye : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
+    (void)ctx;
+    buddy_render::BuddyPalette p =
+        buddy_render::paletteFor(buddy::Expression::Love);
+    uint16_t color = p.accent;
 
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();

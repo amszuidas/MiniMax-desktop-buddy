@@ -3,6 +3,7 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // SadEye -- Sad(deny). Downcast half-closed eye (upper lid lowered) + worried
 // brow (inner-high / outer-low). Pairs with the falling tear symbol.
@@ -13,19 +14,19 @@ class SadEye : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
-    uint16_t bg = ctx->getColorDepth() == 1
-                      ? 0
-                      : ctx->getColorPalette()->get(COLOR_BACKGROUND);
+    (void)ctx;
+    buddy_render::BuddyPalette p =
+        buddy_render::paletteFor(buddy::Expression::Sad);
+    uint16_t color = p.primary;
+    uint16_t bg = p.face;
+    uint16_t pupil = p.secondary;
     int16_t cx = rect.getCenterX();
     int16_t cy = rect.getCenterY();
 
     constexpr int16_t eyeR = 16;
     spi->fillCircle(cx, cy, eyeR, color);
     spi->fillCircle(cx, cy, eyeR - 3, bg);
-    spi->fillCircle(cx, cy + 5, 6, color);  // pupil low (downcast)
+    spi->fillCircle(cx, cy + 5, 6, pupil);  // pupil low (downcast)
     // Lower the upper lid: erase the top portion -> half-closed/droopy.
     spi->fillRect(cx - eyeR, cy - eyeR - 2, eyeR * 2, (int16_t)(eyeR * 1.1f), bg);
     // Worried brow: inner-high / outer-low (mirrored by isLeft).
