@@ -4,6 +4,7 @@
 #include "pet_state.h"
 #include "pet_render.h"
 #include "shake_detect.h"
+#include "ble_peripheral.h"
 #include <FastLED.h>
 
 using namespace m5avatar;
@@ -13,16 +14,11 @@ buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
 ShakeDetector shake;
 buddy::Vibration lastVibration = buddy::Vibration::None;
+buddy_ble::BlePeripheral ble;
+int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它发事件
 #define RGB_PIN 32        // Grove Port A 数据脚
 #define RGB_COUNT 3       // Unit RGB 板载 3 颗
 CRGB leds[RGB_COUNT];
-
-// M1 演示场景索引(中键轮流)
-int simScenario = 0;
-
-void pushInputs() {
-  sm.setInputs(buddy::demoScenario(simScenario));
-}
 
 void fillLeds(const CRGB& c) { for (int i = 0; i < RGB_COUNT; i++) leds[i] = c; }
 
@@ -50,26 +46,32 @@ void setup() {
   M5.Power.setExtOutput(true);
   FastLED.addLeds<WS2812, RGB_PIN, GRB>(leds, RGB_COUNT);
   FastLED.setBrightness(40);
-  pushInputs();
+  ble.begin();
 }
 
 void loop() {
   M5.update();
   uint32_t now = millis();
 
-  // IMU 摇晃检测
+  // IMU 摇晃检测(本地,不经 BLE)
   float ax, ay, az;
   if (M5.Imu.getAccel(&ax, &ay, &az)) {
-    if (shake.feed(ax, ay, az, now)) {
-      sm.onShake(now);
-    }
+    if (shake.feed(ax, ay, az, now)) sm.onShake(now);
   }
 
-  // M1 演示交互(BLE 接入前):
-  // 中键轮流切换预设场景;左键=批准动画;右键=拒绝动画;摇晃=dizzy(在上方 IMU 段)。
-  if (M5.BtnB.wasClicked()) { simScenario = (simScenario + 1) % buddy::kDemoScenarioCount; pushInputs(); }
-  if (M5.BtnA.wasClicked()) { sm.onApprove(now); }
-  if (M5.BtnC.wasClicked()) { sm.onDeny(now); }
+  // BLE 状态 → 状态机输入。未连接 central 或没收到状态时,inputs 默认
+  // connected=false → 失效安全显示"未连接"。
+  buddy_ble::ParsedState ps = ble.latestState();
+  sm.setInputs(ps.inputs);
+  lastApprovalId = ps.hasApproval ? ps.approvalId : 0;
+
+  // 三键 → 发真实审批事件(仅当有待审批时)。
+  // BtnB 轻按=批准一次,长按=永久批准;BtnA=拒绝。
+  if (lastApprovalId > 0) {
+    if (M5.BtnB.wasClicked()) { ble.sendEvent("approve", lastApprovalId); sm.onApprove(now); }
+    if (M5.BtnB.wasHold())    { ble.sendEvent("always",  lastApprovalId); sm.onApprove(now); }
+    if (M5.BtnA.wasClicked()) { ble.sendEvent("deny",    lastApprovalId); sm.onDeny(now); }
+  }
 
   buddy::PetVisual v = sm.update(now);
   if (v.expression != lastExpression) {
@@ -78,8 +80,7 @@ void loop() {
     lastExpression = v.expression;
   }
   // TODO(M2): 这些 delay() 会阻塞主循环最长 ~400ms(LongBuzz),期间丢按键/IMU。
-  // 真板阶段改为非阻塞(millis 状态机或 FreeRTOS timer)。M1 无真板可接受。
-  // 振动:在种类发生变化的瞬间触发一次对应节奏(避免每帧重复触发)
+  // 后续改为非阻塞(millis 状态机或 FreeRTOS timer)。
   if (v.vibration != lastVibration) {
     switch (v.vibration) {
       case buddy::Vibration::Buzz:      M5.Power.setVibration(180); delay(120); M5.Power.setVibration(0); break;
