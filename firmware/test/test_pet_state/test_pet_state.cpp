@@ -164,6 +164,39 @@ void test_expression_label_is_distinct_per_state() {
   TEST_ASSERT_EQUAL_STRING("error",     buddy::expressionLabel(buddy::Expression::Angry));
 }
 
+// ---- 演示场景循环 ----
+
+void test_demo_scenario_cycles_through_distinct_states() {
+  // 4 个互斥场景,索引循环
+  buddy::PetInputs s0 = buddy::demoScenario(0);
+  TEST_ASSERT_TRUE(s0.connected);
+  TEST_ASSERT_EQUAL(0, s0.runningSessions);
+  TEST_ASSERT_EQUAL(0, s0.pendingApprovals);
+
+  buddy::PetInputs s1 = buddy::demoScenario(1);
+  TEST_ASSERT_TRUE(s1.connected);
+  TEST_ASSERT_EQUAL(1, s1.runningSessions);
+  TEST_ASSERT_EQUAL(0, s1.pendingApprovals);
+
+  buddy::PetInputs s2 = buddy::demoScenario(2);
+  TEST_ASSERT_TRUE(s2.connected);
+  TEST_ASSERT_EQUAL(0, s2.runningSessions);
+  TEST_ASSERT_EQUAL(1, s2.pendingApprovals);
+
+  buddy::PetInputs s3 = buddy::demoScenario(3);
+  TEST_ASSERT_FALSE(s3.connected);
+
+  // 循环:索引 4 == 索引 0(取模 4)
+  buddy::PetInputs s4 = buddy::demoScenario(4);
+  TEST_ASSERT_TRUE(s4.connected);
+  TEST_ASSERT_EQUAL(0, s4.runningSessions);
+  TEST_ASSERT_EQUAL(0, s4.pendingApprovals);
+}
+
+void test_demo_scenario_count_is_four() {
+  TEST_ASSERT_EQUAL(4, buddy::kDemoScenarioCount);
+}
+
 // ---- Unity 入口 ----
 void setUp() {}
 void tearDown() {}
@@ -187,5 +220,7 @@ int main() {
   RUN_TEST(test_approve_beats_deny);
   RUN_TEST(test_error_beats_deny);
   RUN_TEST(test_expression_label_is_distinct_per_state);
+  RUN_TEST(test_demo_scenario_cycles_through_distinct_states);
+  RUN_TEST(test_demo_scenario_count_is_four);
   return UNITY_END();
 }

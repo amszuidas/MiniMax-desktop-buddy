@@ -45,4 +45,13 @@ const char* expressionLabel(Expression e) {
   return "";
 }
 
+PetInputs demoScenario(int index) {
+  switch (((index % kDemoScenarioCount) + kDemoScenarioCount) % kDemoScenarioCount) {
+    case 0:  return {.connected = true,  .runningSessions = 0, .pendingApprovals = 0}; // idle
+    case 1:  return {.connected = true,  .runningSessions = 1, .pendingApprovals = 0}; // busy
+    case 2:  return {.connected = true,  .runningSessions = 0, .pendingApprovals = 1}; // approve?
+    default: return {.connected = false, .runningSessions = 0, .pendingApprovals = 0}; // disconnected
+  }
+}
+
 }  // namespace buddy

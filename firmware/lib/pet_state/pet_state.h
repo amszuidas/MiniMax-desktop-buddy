@@ -93,4 +93,9 @@ class PetStateMachine {
 // 文字标签保证用户始终能区分当前状态。返回静态字符串字面量。
 const char* expressionLabel(Expression e);
 
+// M1 演示用:预设互斥场景,中键轮流切换。返回该场景索引(取模)对应的稳态输入。
+// idle / busy / pending / disconnected 四个,覆盖 4 个稳态表情。
+constexpr int kDemoScenarioCount = 4;
+PetInputs demoScenario(int index);
+
 }  // namespace buddy

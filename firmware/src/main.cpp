@@ -17,15 +17,11 @@ buddy::Vibration lastVibration = buddy::Vibration::None;
 #define RGB_COUNT 3       // Unit RGB 板载 3 颗
 CRGB leds[RGB_COUNT];
 
-// M1 模拟状态(M2 由 BLE 取代)
-bool simConnected = true;
-int simRunning = 0;
-int simPending = 0;
+// M1 演示场景索引(中键轮流)
+int simScenario = 0;
 
 void pushInputs() {
-  sm.setInputs({.connected = simConnected,
-                .runningSessions = simRunning,
-                .pendingApprovals = simPending});
+  sm.setInputs(buddy::demoScenario(simScenario));
 }
 
 void fillLeds(const CRGB& c) { for (int i = 0; i < RGB_COUNT; i++) leds[i] = c; }
@@ -69,12 +65,11 @@ void loop() {
     }
   }
 
-  // BtnA 轻按:切换连接;BtnB 轻按:+1 待审批,长按:清空待审批;
-  // BtnC 轻按:切换运行会话。
-  if (M5.BtnA.wasClicked()) { simConnected = !simConnected; pushInputs(); }
-  if (M5.BtnB.wasClicked()) { simPending = simPending > 0 ? 0 : 1; pushInputs(); }
-  if (M5.BtnB.wasHold())    { simPending = 0; sm.onApprove(now); pushInputs(); }
-  if (M5.BtnC.wasClicked()) { simRunning = simRunning > 0 ? 0 : 1; pushInputs(); }
+  // M1 演示交互(BLE 接入前):
+  // 中键轮流切换预设场景;左键=批准动画;右键=拒绝动画;摇晃=dizzy(在上方 IMU 段)。
+  if (M5.BtnB.wasClicked()) { simScenario = (simScenario + 1) % buddy::kDemoScenarioCount; pushInputs(); }
+  if (M5.BtnA.wasClicked()) { sm.onApprove(now); }
+  if (M5.BtnC.wasClicked()) { sm.onDeny(now); }
 
   buddy::PetVisual v = sm.update(now);
   if (v.expression != lastExpression) {
