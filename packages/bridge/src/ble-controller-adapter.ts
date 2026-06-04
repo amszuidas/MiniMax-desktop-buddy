@@ -21,18 +21,29 @@ export interface BleAdapterOptions {
  * Pure policy; the actual BLE I/O lives behind BleLinkLike.
  */
 export class BleControllerAdapter {
+  private bound = false;
   constructor(private readonly link: BleLinkLike, private readonly opts: BleAdapterOptions) {}
 
-  /** Wire device → daemon events. Call once after construction. */
+  /** Wire device → daemon events. Idempotent: safe to call more than once. */
   bind(): void {
+    if (this.bound) return;
+    this.bound = true;
     this.link.onEvent((payload) => {
       const ev = decodeEvent(payload);
       if (!ev) return;
-      void this.opts.decide(ev.id, eventToDecision(ev.ev));
+      // A device button press is fire-and-forget; a failed daemon decision
+      // (network/daemon error) must NOT crash the bridge process via an
+      // unhandled rejection. Log and move on.
+      Promise.resolve(this.opts.decide(ev.id, eventToDecision(ev.ev))).catch((err: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error('[BleAdapter] decide failed:', err);
+      });
     });
   }
 
-  /** Push a controller state snapshot to the device. */
+  /** Push a controller state snapshot to the device.
+   *  Note (M2): no debounce — Controller only emits on state change, which is
+   *  low-frequency. If bursts become an issue, coalesce writes here. */
   handleState(state: BuddyState): void {
     this.link.writeState(encodeState(state));
   }
