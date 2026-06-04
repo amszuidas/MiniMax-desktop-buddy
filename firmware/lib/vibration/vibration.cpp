@@ -24,11 +24,10 @@ void scriptFor(VibrationPattern p, const Seg*& segs, int& count) {
 void VibrationPlayer::play(VibrationPattern pattern, uint32_t now_ms) {
   pattern_ = pattern;
   startMs_ = now_ms;
-  playing_ = (pattern != VibrationPattern::None);
 }
 
 uint8_t VibrationPlayer::update(uint32_t now_ms) const {
-  if (!playing_) return 0;
+  if (pattern_ == VibrationPattern::None) return 0;
   const Seg* segs = nullptr;
   int count = 0;
   scriptFor(pattern_, segs, count);

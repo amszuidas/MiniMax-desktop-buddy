@@ -4,7 +4,7 @@
 namespace buddy {
 
 // 振动模式,对应 PetVisual.vibration 的种类。
-enum class VibrationPattern { None, Buzz, DoubleTap, LongBuzz, Pulse };
+enum class VibrationPattern { None, Buzz, DoubleTap, Pulse, LongBuzz };
 
 /**
  * 非阻塞振动播放器。play() 载入一个分段脚本 + 起始时刻;update(now) 返回此刻
@@ -19,7 +19,6 @@ class VibrationPlayer {
  private:
   VibrationPattern pattern_ = VibrationPattern::None;
   uint32_t startMs_ = 0;
-  bool playing_ = false;
 };
 
 }  // namespace buddy
