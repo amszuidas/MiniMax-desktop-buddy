@@ -56,6 +56,18 @@ describe('BLE protocol', () => {
     expect(decodeEvent(Buffer.from('{"ev":"approve","id":300}', 'utf8'))).toBeNull();   // out of 1..255
   });
 
+  it('encodeState carries the error flag e when set', () => {
+    const state: BuddyState = { v: 1, c: 1, r: 1, p: 0, a: null, e: 1 };
+    const parsed = JSON.parse(encodeState(state).toString('utf8'));
+    expect(parsed.e).toBe(1);
+  });
+
+  it('encodeState omits e when not set (keeps payload small)', () => {
+    const state: BuddyState = { v: 1, c: 1, r: 0, p: 0, a: null };
+    const parsed = JSON.parse(encodeState(state).toString('utf8'));
+    expect(parsed.e).toBeUndefined();
+  });
+
   it('eventToDecision maps ev → daemon Decision', () => {
     expect(eventToDecision('approve')).toBe('allowOnce');
     expect(eventToDecision('always')).toBe('allowAlways');

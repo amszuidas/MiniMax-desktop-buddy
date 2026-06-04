@@ -45,4 +45,6 @@ export interface BuddyState {
     d: string;
     s: string;
   } | null;
+  /** 1 = a session.error just fired (transient; device plays the error face). Omitted/0 otherwise. */
+  e?: 0 | 1;
 }

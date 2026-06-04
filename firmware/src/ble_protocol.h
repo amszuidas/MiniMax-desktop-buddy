@@ -20,6 +20,7 @@ struct ParsedState {
   int approvalId = 0;       // localId
   char toolName[32] = {0};  // 容纳 Mac 端 ≤24 字节
   char desc[64] = {0};      // 容纳 Mac 端 ≤60 字节
+  bool hasError = false;    // "e":1 → daemon 刚报 session.error,设备播 Angry 脸
 };
 
 // 解析 State 包(Mac→设备)。失败时 ok=false。
@@ -38,6 +39,7 @@ inline ParsedState parseState(const char* json, size_t len) {
     snprintf(s.toolName, sizeof(s.toolName), "%s", t);
     snprintf(s.desc, sizeof(s.desc), "%s", d);
   }
+  s.hasError = (doc["e"] | 0) == 1;
   s.ok = true;
   return s;
 }
