@@ -8,6 +8,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "bridge": "tsx src/bin/bridge.ts",
+    "bridge:ble": "tsx src/bin/bridge-ble.ts",
     "ble-probe": "tsx src/bin/ble-probe.ts"
   },
   "dependencies": {
