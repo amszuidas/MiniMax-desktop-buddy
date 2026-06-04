@@ -23,7 +23,6 @@ uint8_t lastVibLevel = 255;  // sentinel != any normal level → first write alw
 buddy_ble::BlePeripheral ble;
 int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它发事件
 m5avatar::Face* buddyFace = nullptr;
-bool dizzyEyesOn = false;
 uint32_t lastRemindMs = 0;
 bool prevHadPending = false;
 #define RGB_PIN 32        // Grove Port A 数据脚
@@ -135,9 +134,12 @@ void loop() {
   g_buddyFx.nowMs = now;
   // Drive exaggerated face params every frame (rotation/scale/eye/mouth/breath per expression).
   driveFace(avatar, v.expression, v.intensity, now);
-  // Dizzy enter/exit: swap to spiral eyes (only on change).
-  const bool wantDizzy = (v.expression == buddy::Expression::Dizzy);
-  if (wantDizzy != dizzyEyesOn) { setDizzyEyes(buddyFace, wantDizzy); dizzyEyesOn = wantDizzy; }
+  // Per-expression custom eyes: spiral for Dizzy, heart for Love, else default.
+  // setEyeKind() guards against redundant swaps internally.
+  EyeKind wantEye = EyeKind::Default;
+  if (v.expression == buddy::Expression::Dizzy) wantEye = EyeKind::Spiral;
+  else if (v.expression == buddy::Expression::Love) wantEye = EyeKind::Heart;
+  setEyeKind(buddyFace, wantEye);
   // Speech bubble text still updated (text fallback to distinguish states).
   if (v.expression != lastExpression) {
     avatar.setExpression(baseLibExpression(v.expression));

@@ -5,14 +5,16 @@
 #include <Mouth.h>
 #include <Eyeblow.h>
 #include "spiral_eye.h"
+#include "heart_eye.h"
 #include "buddy_effect.h"
 
 // Custom Face assembly for buddy desktop pet.
 //
 // Design decisions:
-//   - Spiral eyes (Dizzy): swap left/right Eye Drawables via
-//     Face::setLeftEye() / setRightEye().  setDizzyEyes(face, true) installs
-//     SpiralEye instances; false restores the default library Eye instances.
+//   - Per-expression custom eyes: swap left/right Eye Drawables via
+//     Face::setLeftEye() / setRightEye().  setEyeKind(face, kind) installs the
+//     SpiralEye instances (Dizzy), the HeartEye instances (Love), or restores
+//     the default library Eye instances (everything else).
 //
 //   - Overlay effects (hearts / sweat / Zzz / stars): the library Face has no
 //     setEffect().  addTask() gives no canvas access.  So we use the Mouth slot
@@ -30,23 +32,34 @@ namespace buddy_face {
 // these ourselves with static lifetime.
 inline SpiralEye s_spiralL;
 inline SpiralEye s_spiralR;
+inline HeartEye s_heartL;
+inline HeartEye s_heartR;
 inline m5avatar::Eye s_defaultEyeR(8, false);
 inline m5avatar::Eye s_defaultEyeL(8, true);
 
-// Track whether spiral eyes are currently installed.
-inline bool s_dizzyActive = false;
+// Which custom eyes are currently installed.
+enum class EyeKind { Default, Spiral, Heart };
+inline EyeKind s_curEye = EyeKind::Default;
 
-// Swap eyes between spiral and default.
-inline void setDizzyEyes(m5avatar::Face* face, bool dizzy) {
-  if (dizzy == s_dizzyActive) return;
-  if (dizzy) {
-    face->setLeftEye(&s_spiralL);
-    face->setRightEye(&s_spiralR);
-  } else {
-    face->setLeftEye(&s_defaultEyeL);
-    face->setRightEye(&s_defaultEyeR);
+// Swap eyes to the requested kind (no-op if already installed).
+inline void setEyeKind(m5avatar::Face* face, EyeKind kind) {
+  if (kind == s_curEye) return;
+  switch (kind) {
+    case EyeKind::Spiral:
+      face->setLeftEye(&s_spiralL);
+      face->setRightEye(&s_spiralR);
+      break;
+    case EyeKind::Heart:
+      face->setLeftEye(&s_heartL);
+      face->setRightEye(&s_heartR);
+      break;
+    case EyeKind::Default:
+    default:
+      face->setLeftEye(&s_defaultEyeL);
+      face->setRightEye(&s_defaultEyeR);
+      break;
   }
-  s_dizzyActive = dizzy;
+  s_curEye = kind;
 }
 
 // Create a Face with BuddyEffect installed in the mouth slot.
