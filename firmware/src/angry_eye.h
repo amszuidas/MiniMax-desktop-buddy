@@ -37,7 +37,8 @@ class AngryEye : public m5avatar::Drawable {
     spi->fillTriangle(inner, innerY, outer, outerY, inner, innerY + 5, color);
     spi->fillTriangle(outer, outerY, inner, innerY + 5, outer, outerY + 5, color);
     // Press brow onto eye: erase a wedge at the inner-top of the eye.
-    spi->fillTriangle(cx, cy - eyeR, inner, innerY, cx, cy - 2, bg);
+    // Stop the wedge above the pupil (pupil top is cy-6) so it isn't bitten.
+    spi->fillTriangle(cx, cy - eyeR, inner, innerY, cx, cy - 8, bg);
   }
 
  private:
