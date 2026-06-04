@@ -31,4 +31,18 @@ PetVisual PetStateMachine::update(uint32_t now_ms) const {
   return steadyVisual(inputs_);
 }
 
+const char* expressionLabel(Expression e) {
+  switch (e) {
+    case Expression::Sleepy:  return "zzz";
+    case Expression::Neutral: return "idle";
+    case Expression::Happy:   return "busy";
+    case Expression::Doubt:   return "approve?";
+    case Expression::Dizzy:   return "dizzy";
+    case Expression::Love:    return "approved";
+    case Expression::Sad:     return "denied";
+    case Expression::Angry:   return "error";
+  }
+  return "";
+}
+
 }  // namespace buddy

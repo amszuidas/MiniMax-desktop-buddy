@@ -152,6 +152,18 @@ void test_error_beats_deny() {
                     static_cast<int>(sm.update(1200).expression));
 }
 
+void test_expression_label_is_distinct_per_state() {
+  // 每个状态都有非空标签,且摇晃与待审批标签不同(撞脸但文字可区分)
+  TEST_ASSERT_EQUAL_STRING("zzz",       buddy::expressionLabel(buddy::Expression::Sleepy));
+  TEST_ASSERT_EQUAL_STRING("idle",      buddy::expressionLabel(buddy::Expression::Neutral));
+  TEST_ASSERT_EQUAL_STRING("busy",      buddy::expressionLabel(buddy::Expression::Happy));
+  TEST_ASSERT_EQUAL_STRING("approve?",  buddy::expressionLabel(buddy::Expression::Doubt));
+  TEST_ASSERT_EQUAL_STRING("dizzy",     buddy::expressionLabel(buddy::Expression::Dizzy));
+  TEST_ASSERT_EQUAL_STRING("approved",  buddy::expressionLabel(buddy::Expression::Love));
+  TEST_ASSERT_EQUAL_STRING("denied",    buddy::expressionLabel(buddy::Expression::Sad));
+  TEST_ASSERT_EQUAL_STRING("error",     buddy::expressionLabel(buddy::Expression::Angry));
+}
+
 // ---- Unity 入口 ----
 void setUp() {}
 void tearDown() {}
@@ -174,5 +186,6 @@ int main() {
   RUN_TEST(test_shake_beats_error);
   RUN_TEST(test_approve_beats_deny);
   RUN_TEST(test_error_beats_deny);
+  RUN_TEST(test_expression_label_is_distinct_per_state);
   return UNITY_END();
 }

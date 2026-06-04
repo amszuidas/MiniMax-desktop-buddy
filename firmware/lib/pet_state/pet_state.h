@@ -88,4 +88,9 @@ class PetStateMachine {
   uint32_t errorUntil_ = 0;
 };
 
+// 每个表情对应的简短文字标签,显示在 avatar speech bubble 里。
+// 因 8 个状态映射到 avatar 仅 6 个内置脸会撞脸(尤其 Dizzy/Doubt),
+// 文字标签保证用户始终能区分当前状态。返回静态字符串字面量。
+const char* expressionLabel(Expression e);
+
 }  // namespace buddy

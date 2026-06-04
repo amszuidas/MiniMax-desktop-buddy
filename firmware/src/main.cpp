@@ -72,13 +72,14 @@ void loop() {
   // BtnA 轻按:切换连接;BtnB 轻按:+1 待审批,长按:清空待审批;
   // BtnC 轻按:切换运行会话。
   if (M5.BtnA.wasClicked()) { simConnected = !simConnected; pushInputs(); }
-  if (M5.BtnB.wasClicked()) { simPending += 1; pushInputs(); }
+  if (M5.BtnB.wasClicked()) { simPending = simPending > 0 ? 0 : 1; pushInputs(); }
   if (M5.BtnB.wasHold())    { simPending = 0; sm.onApprove(now); pushInputs(); }
   if (M5.BtnC.wasClicked()) { simRunning = simRunning > 0 ? 0 : 1; pushInputs(); }
 
   buddy::PetVisual v = sm.update(now);
   if (v.expression != lastExpression) {
     applyExpression(avatar, v.expression);
+    avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
   }
   // TODO(M2): 这些 delay() 会阻塞主循环最长 ~400ms(LongBuzz),期间丢按键/IMU。
