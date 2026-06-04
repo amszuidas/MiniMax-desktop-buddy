@@ -2,7 +2,6 @@
 #include <M5Unified.h>
 #include <Avatar.h>
 #include "pet_state.h"
-#include "pet_render.h"
 #include "shake_detect.h"
 #include "vibration.h"
 #include "ble_peripheral.h"
@@ -24,7 +23,7 @@ int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它
 m5avatar::Face* buddyFace = nullptr;
 bool dizzyEyesOn = false;
 uint32_t lastRemindMs = 0;
-int lastPendingForRelief = 0;
+bool prevHadPending = false;
 #define RGB_PIN 32        // Grove Port A 数据脚
 #define RGB_COUNT 3       // Unit RGB 板载 3 颗
 CRGB leds[RGB_COUNT];
@@ -91,9 +90,11 @@ void loop() {
   lastApprovalId = (ble.isConnected() && ps.hasApproval) ? ps.approvalId : 0;
 
   // Relief edge: pending goes from >0 to 0 → trigger "sigh of relief" transient.
-  int curPendingForRelief = (lastApprovalId > 0) ? 1 : 0;
-  if (lastPendingForRelief > 0 && curPendingForRelief == 0) sm.onApprovalsCleared(now);
-  lastPendingForRelief = curPendingForRelief;
+  // Only recognize "approvals cleared" edge while still connected — disconnect must not
+  // be misinterpreted as "the approval was handled".
+  const bool curHadPending = (ble.isConnected() && lastApprovalId > 0);
+  if (ble.isConnected() && prevHadPending && !curHadPending) sm.onApprovalsCleared(now);
+  prevHadPending = curHadPending;
 
   // session.error → Angry 脸(error 标志是 Mac 侧瞬态;latch 只在上升沿触发一次)
   static bool errorLatch = false;
