@@ -36,7 +36,8 @@ export class StateModel {
       this.running.add(sid);
     } else if (SESSION_END_TYPES.has(ev.type) && sid) {
       this.running.delete(sid);
-      // session.error additionally lights a transient error flag for the device's Angry face.
+      // session.error lights a transient error flag for the device's Angry face.
+      // Successive errors reset the window; only the latest matters.
       if (ev.type === 'session.error') this.errorUntil = ev.timestamp + ERROR_FLAG_MS;
     } else if (ev.type === 'permission.ask') {
       this.addPending(this.eventToApproval(ev));
@@ -75,7 +76,7 @@ export class StateModel {
     return first.done ? null : first.value;
   }
 
-  getState(now = 0): BuddyState {
+  getState(now?: number): BuddyState {
     const first = this.pending.values().next();
     const a = first.done
       ? null
@@ -92,8 +93,9 @@ export class StateModel {
       p: this.pending.size,
       a,
     };
-    // error flag is transient: only set while within the window (wrap-safe compare)
-    if (this.errorUntil !== 0 && now !== 0 && (now - this.errorUntil) < 0) {
+    // error flag is transient: only active while now < errorUntil (same-machine
+    // clock; ev.timestamp from daemon and Date.now() from bridge are both local).
+    if (this.errorUntil !== 0 && now !== undefined && now < this.errorUntil) {
       state.e = 1;
     }
     return state;

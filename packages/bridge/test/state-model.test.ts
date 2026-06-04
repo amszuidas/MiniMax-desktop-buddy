@@ -140,9 +140,16 @@ describe('StateModel', () => {
     expect(m.getState(1000 + 3000 + 1).e).toBeUndefined();
   });
 
-  it('getState() defaults the error flag off', () => {
+  it('getState(now) returns no error flag when none was set', () => {
     const m = new StateModel();
     m.setConnected(true);
     expect(m.getState(500).e).toBeUndefined();
+  });
+
+  it('no-arg getState() never sets e, even after a session.error (backward compat)', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    m.applyEvent({ type: 'session.error', timestamp: 1000, source: 's', payload: { sessionId: 'mvs_1', error: 'x' } });
+    expect(m.getState().e).toBeUndefined();  // no-arg callers never see the transient flag
   });
 });
