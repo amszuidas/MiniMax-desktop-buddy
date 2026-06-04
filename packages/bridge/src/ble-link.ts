@@ -48,6 +48,7 @@ export class BleLink implements BleLinkLike {
     const mod = await import('@abandonware/noble');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.noble = (mod as any).default ?? mod;
+    try { this.noble.reset?.(); } catch { /* reset unavailable on some platforms */ }
 
     this.noble.on('stateChange', (s: string) => {
       if (s === 'poweredOn' && !this.stopped) void this.noble.startScanningAsync([], false);
