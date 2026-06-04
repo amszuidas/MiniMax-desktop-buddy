@@ -28,13 +28,13 @@ namespace buddy_face {
 // (only the initial ones from the constructor or the ones assigned at
 // construction time get cleaned up in ~Face).  Since we swap in/out, we own
 // these ourselves with static lifetime.
-static SpiralEye s_spiralL;
-static SpiralEye s_spiralR;
-static m5avatar::Eye s_defaultEyeR(8, false);
-static m5avatar::Eye s_defaultEyeL(8, true);
+inline SpiralEye s_spiralL;
+inline SpiralEye s_spiralR;
+inline m5avatar::Eye s_defaultEyeR(8, false);
+inline m5avatar::Eye s_defaultEyeL(8, true);
 
 // Track whether spiral eyes are currently installed.
-static bool s_dizzyActive = false;
+inline bool s_dizzyActive = false;
 
 // Swap eyes between spiral and default.
 inline void setDizzyEyes(m5avatar::Face* face, bool dizzy) {
@@ -63,6 +63,9 @@ inline m5avatar::Face* makeBuddyFace() {
   // deleted in ~Face), we need our own Mouth for delegation.
   static m5avatar::Mouth s_mouth(50, 90, 4, 60);
   static BuddyEffect s_effect(&s_mouth);
+  // 注意:~Face() 会对装入的 mouth 指针 delete。这里装的是函数内 static BuddyEffect,
+  // 仅因本固件永不析构 Face(MCU 直接 reset)而安全。若将来支持优雅关闭/换脸,需改。
+  // 同理 new Face() 默认分配的 Mouth 被 setMouth 替换后泄漏(一次性 ~20 字节,可接受)。
   face->setMouth(&s_effect);
 
   return face;
