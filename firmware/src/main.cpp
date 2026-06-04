@@ -7,6 +7,7 @@
 #include "ble_peripheral.h"
 #include "buddy_face.h"
 #include "buddy_fx.h"
+#include "face_drive.h"
 #include <FastLED.h>
 
 using namespace m5avatar;
