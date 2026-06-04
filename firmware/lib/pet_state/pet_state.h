@@ -48,6 +48,7 @@ struct PetVisual {
   Expression expression;
   Led led;
   Vibration vibration;
+  uint8_t intensity = 0;  // 0..255,冒汗等强度(由 runningSessions 映射)
 };
 
 // 瞬态动画时长(ms)
@@ -55,6 +56,8 @@ constexpr uint32_t kShakeMs = 2000;
 constexpr uint32_t kApproveMs = 1500;
 constexpr uint32_t kDenyMs = 1500;
 constexpr uint32_t kErrorMs = 3000;
+constexpr uint32_t kReliefMs = 1500;
+constexpr uint32_t kDrowsyAfterMs = 60000;
 
 /**
  * 宠物状态机。喂稳态输入 + 瞬态事件(带触发时刻),update(now) 计算当前
@@ -76,6 +79,7 @@ class PetStateMachine {
   void onApprove(uint32_t now_ms) { approveUntil_ = now_ms + kApproveMs; }
   void onDeny(uint32_t now_ms) { denyUntil_ = now_ms + kDenyMs; }
   void onSessionError(uint32_t now_ms) { errorUntil_ = now_ms + kErrorMs; }
+  void onApprovalsCleared(uint32_t now_ms) { reliefUntil_ = now_ms + kReliefMs; }
 
   // 计算当前应显示的 visual(处理瞬态衰减)。
   PetVisual update(uint32_t now_ms) const;
@@ -86,6 +90,9 @@ class PetStateMachine {
   uint32_t approveUntil_ = 0;
   uint32_t denyUntil_ = 0;
   uint32_t errorUntil_ = 0;
+  uint32_t reliefUntil_ = 0;
+  mutable uint32_t idleSinceMs_ = 0;
+  mutable bool idleTracked_ = false;
 };
 
 // 每个表情对应的简短文字标签,显示在 avatar speech bubble 里。

@@ -197,6 +197,62 @@ void test_demo_scenario_count_is_four() {
   TEST_ASSERT_EQUAL(4, buddy::kDemoScenarioCount);
 }
 
+// ---- Drowsy / Relief / Intensity (M4 Task3) ----
+
+void test_drowsy_after_idle_timeout() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 0});
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(1000).expression));
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Sleepy),
+                    static_cast<int>(sm.update(1000 + kDrowsyAfterMs + 1).expression));
+}
+
+void test_activity_resets_drowsy() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 0});
+  sm.update(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Sleepy),
+                    static_cast<int>(sm.update(1000 + kDrowsyAfterMs + 1).expression));
+  sm.setInputs({.connected = true, .runningSessions = 1, .pendingApprovals = 0});
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Happy),
+                    static_cast<int>(sm.update(1000 + kDrowsyAfterMs + 100).expression));
+}
+
+void test_relief_transient_on_approvals_cleared() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 1});
+  sm.update(500);
+  // Approvals cleared: caller updates inputs AND fires transient
+  sm.setInputs({.connected = true, .runningSessions = 0, .pendingApprovals = 0});
+  sm.onApprovalsCleared(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Happy),
+                    static_cast<int>(sm.update(1200).expression));
+  // 过期回落(此时无 pending、idle)
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Neutral),
+                    static_cast<int>(sm.update(1000 + kReliefMs + 1).expression));
+}
+
+void test_relief_yields_to_higher_transients() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true});
+  sm.onApprovalsCleared(1000);
+  sm.onShake(1000);
+  TEST_ASSERT_EQUAL(static_cast<int>(Expression::Dizzy),
+                    static_cast<int>(sm.update(1200).expression));
+}
+
+void test_intensity_scales_with_running() {
+  PetStateMachine sm;
+  sm.setInputs({.connected = true, .runningSessions = 1});
+  uint8_t i1 = sm.update(100).intensity;
+  sm.setInputs({.connected = true, .runningSessions = 3});
+  uint8_t i3 = sm.update(200).intensity;
+  TEST_ASSERT_TRUE(i3 > i1);
+  sm.setInputs({.connected = true, .runningSessions = 0});
+  TEST_ASSERT_EQUAL_UINT8(0, sm.update(300).intensity);
+}
+
 // ---- Unity 入口 ----
 void setUp() {}
 void tearDown() {}
@@ -222,5 +278,10 @@ int main() {
   RUN_TEST(test_expression_label_is_distinct_per_state);
   RUN_TEST(test_demo_scenario_cycles_through_distinct_states);
   RUN_TEST(test_demo_scenario_count_is_four);
+  RUN_TEST(test_drowsy_after_idle_timeout);
+  RUN_TEST(test_activity_resets_drowsy);
+  RUN_TEST(test_relief_transient_on_approvals_cleared);
+  RUN_TEST(test_relief_yields_to_higher_transients);
+  RUN_TEST(test_intensity_scales_with_running);
   return UNITY_END();
 }
