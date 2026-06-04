@@ -153,30 +153,4 @@ describe('StateModel', () => {
     expect(m.getState().e).toBeUndefined();  // no-arg callers never see the transient flag
   });
 
-  it('setRunningCount overrides the running tally (resync from authoritative source)', () => {
-    const m = new StateModel();
-    m.setConnected(true);
-    m.applyEvent({ type: 'session.start', timestamp: 1, source: 's', payload: { sessionId: 'mvs_1' } });
-    expect(m.getState().r).toBe(1);
-    m.setRunningCount(5);
-    expect(m.getState().r).toBe(5);
-    m.applyEvent({ type: 'session.finish', timestamp: 2, source: 's', payload: { sessionId: 'mvs_1' } });
-    // mvs_1 was cleared from the event set by setRunningCount, so this finish
-    // for an unknown id leaves the resynced baseline untouched.
-    expect(m.getState().r).toBe(5);
-  });
-
-  it('lifecycle events adjust from the resynced baseline (round-trip)', () => {
-    const m = new StateModel();
-    m.setConnected(true);
-    m.setRunningCount(3);
-    m.applyEvent({ type: 'session.start', timestamp: 1, source: 's', payload: { sessionId: 'mvs_new' } });
-    expect(m.getState().r).toBe(4);  // baseline 3 + 1 new
-    m.applyEvent({ type: 'session.finish', timestamp: 2, source: 's', payload: { sessionId: 'mvs_new' } });
-    expect(m.getState().r).toBe(3);  // tracked sid finished → back to baseline
-    // duplicate start of an already-tracked sid does not double-count
-    m.applyEvent({ type: 'session.start', timestamp: 3, source: 's', payload: { sessionId: 'mvs_dup' } });
-    m.applyEvent({ type: 'session.start', timestamp: 4, source: 's', payload: { sessionId: 'mvs_dup' } });
-    expect(m.getState().r).toBe(4);  // +1 only once despite duplicate start
-  });
 });

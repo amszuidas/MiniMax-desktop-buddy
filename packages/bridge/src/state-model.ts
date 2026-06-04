@@ -25,33 +25,18 @@ export class StateModel {
   private byLocalId = new Map<number, string>();
   private nextLocalId = 1;
   private errorUntil = 0;
-  private runningBaseline: number | null = null;
 
   setConnected(c: boolean): void {
     this.connected = c;
   }
 
-  /** Resync the running tally from an authoritative count (e.g. daemon agent scan).
-   *  Clears the event-tracked set so later lifecycle events adjust from this baseline.
-   *  CONTRACT: callers must call this periodically. Between syncs the count drifts
-   *  one-directionally (over-count): a finish for a session that predates the sync
-   *  is not in the tracked set, so it does not decrement the baseline. The periodic
-   *  resync (see Controller.syncRunning, called on connect and on a timer) corrects it. */
-  setRunningCount(n: number): void {
-    this.runningBaseline = n;
-    this.running.clear();
-  }
-
   applyEvent(ev: DaemonEvent): void {
     const sid = typeof ev.payload.sessionId === 'string' ? ev.payload.sessionId : undefined;
     if (ev.type === 'session.start' && sid) {
-      const isNew = !this.running.has(sid);
       this.running.add(sid);
-      if (this.runningBaseline !== null && isNew) this.runningBaseline += 1;
     } else if (SESSION_END_TYPES.has(ev.type) && sid) {
-      const had = this.running.delete(sid);
-      if (this.runningBaseline !== null && had) this.runningBaseline = Math.max(0, this.runningBaseline - 1);
-      // session.error lights a transient error flag for the device's Angry face.
+      this.running.delete(sid);
+      // session.error additionally lights a transient error flag for the device's Angry face.
       // Successive errors reset the window; only the latest matters.
       if (ev.type === 'session.error') this.errorUntil = ev.timestamp + ERROR_FLAG_MS;
     } else if (ev.type === 'permission.ask') {
@@ -104,7 +89,7 @@ export class StateModel {
     const state: BuddyState = {
       v: 1,
       c: this.connected ? 1 : 0,
-      r: this.runningBaseline ?? this.running.size,
+      r: this.running.size,
       p: this.pending.size,
       a,
     };
