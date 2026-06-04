@@ -10,13 +10,20 @@ class BlePeripheral {
  public:
   void begin() {
     NimBLEDevice::init(kDeviceName);
+    // Just Works bonding(无屏设备:无输入无输出);加密在 _ENC 特征上强制。
+    NimBLEDevice::setSecurityAuth(true, false, true);  // bonding, no MITM, secure connections
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+    // 显式抬高 MTU,容纳 ~173B State 写 + 审批事件(默认 23 会截断)。
+    NimBLEDevice::setMTU(247);
     server_ = NimBLEDevice::createServer();
     NimBLEService* svc = server_->createService(kServiceUuid);
 
-    stateChar_ = svc->createCharacteristic(kStateUuid, NIMBLE_PROPERTY::WRITE);
+    stateChar_ = svc->createCharacteristic(
+        kStateUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC);
     stateChar_->setCallbacks(&stateCb_);
 
-    eventChar_ = svc->createCharacteristic(kEventUuid, NIMBLE_PROPERTY::NOTIFY);
+    eventChar_ = svc->createCharacteristic(
+        kEventUuid, NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::READ_ENC);
 
     svc->start();
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
@@ -40,7 +47,7 @@ class BlePeripheral {
     char buf[48];
     size_t n = buildEvent(ev, id, buf, sizeof(buf));
     eventChar_->setValue(reinterpret_cast<uint8_t*>(buf), n);
-    eventChar_->notify();
+    eventChar_->indicate();
   }
 
  private:
