@@ -18,6 +18,7 @@ buddy::Expression lastExpression = buddy::Expression::Neutral;
 ShakeDetector shake;
 buddy::Vibration lastVibration = buddy::Vibration::None;
 buddy::VibrationPlayer vibPlayer;
+uint8_t lastVibLevel = 255;  // sentinel != any normal level → first write always lands
 buddy_ble::BlePeripheral ble;
 int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它发事件
 m5avatar::Face* buddyFace = nullptr;
@@ -56,6 +57,17 @@ void renderLed(buddy::Led led, uint32_t now) {
   FastLED.show();
 }
 
+// 底脸库表情:Love/Happy/Dizzy/Sleepy 用 Neutral(符号由 BuddyEffect 自绘,避免库 Effect 双画);
+// Sad/Angry/Doubt 用库对应表情(BuddyEffect 对它们 noop,不会双画),保住这三个状态的可读性。
+m5avatar::Expression baseLibExpression(buddy::Expression e) {
+  switch (e) {
+    case buddy::Expression::Sad:   return m5avatar::Expression::Sad;
+    case buddy::Expression::Angry: return m5avatar::Expression::Angry;
+    case buddy::Expression::Doubt: return m5avatar::Expression::Doubt;
+    default:                       return m5avatar::Expression::Neutral; // Neutral/Happy/Dizzy/Love/Sleepy
+  }
+}
+
 void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
@@ -63,7 +75,7 @@ void setup() {
   avatar.init();
   buddyFace = makeBuddyFace();
   avatar.setFace(buddyFace);
-  avatar.setExpression(m5avatar::Expression::Neutral);  // base face stays Neutral; symbols drawn by BuddyEffect
+  // base lib expression is set per-frame in loop() (see baseLibExpression)
   // ⚠️ Core2 默认不给 Grove 5V 供电,必须显式打开,否则 Unit RGB 不亮
   M5.Power.setExtOutput(true);
   FastLED.addLeds<WS2812, RGB_PIN, GRB>(leds, RGB_COUNT);
@@ -123,6 +135,7 @@ void loop() {
   if (wantDizzy != dizzyEyesOn) { setDizzyEyes(buddyFace, wantDizzy); dizzyEyesOn = wantDizzy; }
   // Speech bubble text still updated (text fallback to distinguish states).
   if (v.expression != lastExpression) {
+    avatar.setExpression(baseLibExpression(v.expression));
     avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
   }
@@ -142,7 +155,8 @@ void loop() {
   } else {
     lastRemindMs = 0;
   }
-  M5.Power.setVibration(vibPlayer.update(now));
+  uint8_t vibLevel = vibPlayer.update(now);
+  if (vibLevel != lastVibLevel) { M5.Power.setVibration(vibLevel); lastVibLevel = vibLevel; }
   renderLed(v.led, now);
   delay(16);
 }
