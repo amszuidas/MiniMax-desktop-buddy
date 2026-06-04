@@ -25,7 +25,10 @@ class BlePeripheral {
     adv->start();
   }
 
-  /** 最近一次 Mac 写入的状态(若从未收到,ok=false 默认未连接)。 */
+  /** 最近一次 Mac 写入的状态(若从未收到,ok=false 默认未连接)。
+   *  注意:非线程安全——onWrite 在 NimBLE 任务写 latest,本方法在主循环读,
+   *  struct 拷贝非原子。M2 单读者(宠物显示)+ 低频写下风险极低、瞬时毛刺无害。
+   *  若将来加第二个读者或高频写,需加 mutex/spinlock。 */
   ParsedState latestState() const { return stateCb_.latest; }
 
   /** 是否有 central 连着。 */
