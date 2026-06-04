@@ -4,6 +4,7 @@
 #include <Drawable.h>
 #include <Mouth.h>
 #include "buddy_fx.h"
+#include "buddy_palette.h"
 
 // BuddyEffect -- a composite Drawable that:
 //   1) Delegates to the real Mouth so the mouth is never lost.
@@ -23,38 +24,38 @@ class BuddyEffect : public m5avatar::Drawable {
 
   void draw(M5Canvas* spi, m5avatar::BoundingRect rect,
             m5avatar::DrawContext* ctx) override {
-    // Step 1: draw the real mouth so it is never lost.
+    buddy_render::BuddyPalette p = buddy_render::paletteFor(g_buddyFx.expr);
+    uint32_t now = g_buddyFx.nowMs;
+
+    drawMoodBackdrop(spi, p, g_buddyFx.expr, now, g_buddyFx.intensity);
+
     if (mouth_) {
       mouth_->draw(spi, rect, ctx);
     }
 
-    // Step 2: overlay effect symbols based on current expression.
-    uint16_t color = ctx->getColorDepth() == 1
-                         ? 1
-                         : ctx->getColorPalette()->get(COLOR_PRIMARY);
-    uint32_t now = g_buddyFx.nowMs;
-
     switch (g_buddyFx.expr) {
       case buddy::Expression::Love:
-        drawFloatingHearts(spi, color, now);
+        drawFloatingHearts(spi, p.accent, p.accent2, now);
         break;
       case buddy::Expression::Happy:
-        drawSweatDrops(spi, color, now, g_buddyFx.intensity);
+        drawSweatDrops(spi, p.accent, now, g_buddyFx.intensity);
         break;
       case buddy::Expression::Sleepy:
-        drawZzz(spi, color, now);
+        drawZzz(spi, p.accent, now);
         break;
       case buddy::Expression::Dizzy:
-        drawDizzyStars(spi, color, now);
+        drawDizzyStars(spi, p.accent, p.accent2, now);
         break;
       case buddy::Expression::Doubt:
-        drawAlertMark(spi, color, now);
+        drawAlertMark(spi, p.accent, p.accent2, now);
         break;
       case buddy::Expression::Sad:
-        drawTear(spi, color, now);
+        drawRain(spi, p.glow, now);
+        drawTear(spi, p.accent, now);
         break;
       case buddy::Expression::Angry:
-        drawAngerMark(spi, color, now);
+        drawWarningFlash(spi, p.accent, now);
+        drawAngerMark(spi, p.accent, now);
         break;
       default:
         break;
@@ -65,6 +66,82 @@ class BuddyEffect : public m5avatar::Drawable {
   m5avatar::Drawable* mouth_;
 
   // -- Heart helpers (simplified from Effect.h drawHeartMark) ---------------
+
+  static void drawMoodBackdrop(M5Canvas* spi, const buddy_render::BuddyPalette& p,
+                               buddy::Expression expr, uint32_t now,
+                               uint8_t intensity) {
+    uint8_t pulse = buddy_render::triWave8(now, 2200);
+    uint16_t glow = buddy_render::blend565(p.glow, p.backgroundAlt, pulse);
+    spi->fillRoundRect(34, 22, 252, 174, 34, glow);
+    spi->fillRoundRect(54, 42, 212, 134, 28, p.face);
+
+    switch (expr) {
+      case buddy::Expression::Neutral:
+        drawIdleSparkles(spi, p.accent, now);
+        break;
+      case buddy::Expression::Happy:
+        drawBusySweep(spi, p.backgroundAlt, now, intensity);
+        break;
+      case buddy::Expression::Doubt:
+        drawAlertAura(spi, p.accent, now);
+        break;
+      case buddy::Expression::Dizzy:
+        drawDizzyWaves(spi, p.backgroundAlt, now);
+        break;
+      case buddy::Expression::Love:
+        drawLoveGlow(spi, p.glow, now);
+        break;
+      case buddy::Expression::Angry:
+        drawErrorSlashes(spi, p.backgroundAlt, now);
+        break;
+      default:
+        break;
+    }
+  }
+
+  static void drawIdleSparkles(M5Canvas* spi, uint16_t color, uint32_t now) {
+    if ((now / 700) % 4 != 0) return;
+    spi->fillCircle(68, 52, 3, color);
+    spi->fillCircle(247, 62, 2, color);
+  }
+
+  static void drawBusySweep(M5Canvas* spi, uint16_t color, uint32_t now,
+                            uint8_t intensity) {
+    int16_t x = -80 + (int16_t)((now % 1200u) * 400u / 1200u);
+    int count = buddy_render::sweatCountForIntensity(intensity);
+    for (int i = 0; i < count; i++) {
+      spi->fillRoundRect(x - i * 34, 34 + i * 18, 76, 8, 4, color);
+    }
+  }
+
+  static void drawAlertAura(M5Canvas* spi, uint16_t color, uint32_t now) {
+    if ((now / 180) % 2 == 0) {
+      spi->drawRoundRect(26, 14, 268, 190, 36, color);
+      spi->drawRoundRect(30, 18, 260, 182, 34, color);
+    }
+  }
+
+  static void drawDizzyWaves(M5Canvas* spi, uint16_t color, uint32_t now) {
+    int16_t offset = (int16_t)((now % 900u) / 90u);
+    for (int y = 30; y < 190; y += 34) {
+      spi->drawLine(38 + offset, y, 118 + offset, y + 10, color);
+      spi->drawLine(202 - offset, y + 8, 286 - offset, y - 2, color);
+    }
+  }
+
+  static void drawLoveGlow(M5Canvas* spi, uint16_t color, uint32_t now) {
+    int16_t r = 18 + (int16_t)(6.0f * fabsf(sinf(now / 180.0f)));
+    spi->drawCircle(160, 94, r + 76, color);
+    spi->drawCircle(160, 94, r + 92, color);
+  }
+
+  static void drawErrorSlashes(M5Canvas* spi, uint16_t color, uint32_t now) {
+    int16_t shift = ((now / 80) % 2) ? 8 : -8;
+    for (int x = 18; x < 310; x += 54) {
+      spi->fillTriangle(x + shift, 24, x + 22 + shift,
+                        24, x - 20 + shift, 202, color);
+    }
+  }
 
   static void drawHeart(M5Canvas* spi, int16_t cx, int16_t cy, int16_t r,
                         uint16_t color) {
@@ -82,7 +159,8 @@ class BuddyEffect : public m5avatar::Drawable {
   }
 
   // Two hearts float upward in a 2-second cycle.
-  static void drawFloatingHearts(M5Canvas* spi, uint16_t color, uint32_t now) {
+  static void drawFloatingHearts(M5Canvas* spi, uint16_t colorA,
+                                 uint16_t colorB, uint32_t now) {
     constexpr uint32_t period = 2000;
     float phase = (now % period) / (float)period;  // 0..1
 
@@ -93,7 +171,7 @@ class BuddyEffect : public m5avatar::Drawable {
       int16_t yTop = 20;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase);
       int16_t r = 9 + (int16_t)(4.0f * (1.0f - phase));  // shrinks as rises
-      drawHeart(spi, x, y, r, color);
+      drawHeart(spi, x, y, r, colorA);
     }
     // Heart 2: right side, 180-degree phase offset
     {
@@ -103,7 +181,7 @@ class BuddyEffect : public m5avatar::Drawable {
       int16_t yTop = 25;
       int16_t y = yBase - (int16_t)((yBase - yTop) * phase2);
       int16_t r = 8 + (int16_t)(3.0f * (1.0f - phase2));
-      drawHeart(spi, x, y, r, color);
+      drawHeart(spi, x, y, r, colorB);
     }
   }
 
@@ -186,7 +264,8 @@ class BuddyEffect : public m5avatar::Drawable {
   }
 
   // Stars orbit around the head area.
-  static void drawDizzyStars(M5Canvas* spi, uint16_t color, uint32_t now) {
+  static void drawDizzyStars(M5Canvas* spi, uint16_t colorA, uint16_t colorB,
+                             uint32_t now) {
     constexpr uint32_t period = 1400;
     float phase = (now % period) / (float)period * 2.0f * M_PI;
 
@@ -200,14 +279,16 @@ class BuddyEffect : public m5avatar::Drawable {
       int16_t sx = orbitCx + (int16_t)(orbitR * cosf(angle));
       int16_t sy = orbitCy + (int16_t)((orbitR * 0.4f) * sinf(angle));  // elliptical
       int16_t r = 8 + (i % 2);  // slight size variation
-      drawStar(spi, sx, sy, r, color);
+      uint16_t c = (i % 2 == 0) ? colorA : colorB;
+      drawStar(spi, sx, sy, r, c);
     }
   }
 
   // -- Alert mark (Doubt: big exclamation) ---------------------------------
 
   // A big exclamation mark drawn at the upper-right of the face, blinking.
-  static void drawAlertMark(M5Canvas* spi, uint16_t color, uint32_t now) {
+  static void drawAlertMark(M5Canvas* spi, uint16_t color, uint16_t shine,
+                            uint32_t now) {
     // Blink: visible ~70% of a 700ms cycle.
     constexpr uint32_t period = 700;
     float phase = (now % period) / (float)period;
@@ -222,6 +303,7 @@ class BuddyEffect : public m5avatar::Drawable {
     int16_t y = topY + bob;
     // Vertical bar.
     spi->fillRect(cx - barW / 2, y, barW, barH, color);
+    spi->fillRect(cx - 2, y + 4, 4, barH - 8, shine);
     // Dot below the bar.
     constexpr int16_t gap = 12;
     constexpr int16_t dotR = barW / 2 + 1;
@@ -229,6 +311,15 @@ class BuddyEffect : public m5avatar::Drawable {
   }
 
   // -- Tear (Sad: big teardrop sliding down) -------------------------------
+
+  static void drawRain(M5Canvas* spi, uint16_t color, uint32_t now) {
+    int16_t phase = (int16_t)((now % 900u) / 9u);
+    for (int i = 0; i < 7; i++) {
+      int16_t x = 42 + i * 42;
+      int16_t y = (phase + i * 23) % 170;
+      spi->drawLine(x, y + 26, x - 8, y + 48, color);
+    }
+  }
 
   // A big teardrop sliding down from the eye corner, looping.
   static void drawTear(M5Canvas* spi, uint16_t color, uint32_t now) {
@@ -245,6 +336,13 @@ class BuddyEffect : public m5avatar::Drawable {
   }
 
   // -- Anger mark (Angry: pulsing manga vein, upper-right) ------------------
+
+  static void drawWarningFlash(M5Canvas* spi, uint16_t color, uint32_t now) {
+    if ((now / 120) % 2 == 0) {
+      spi->drawTriangle(38, 34, 58, 34, 48, 54, color);
+      spi->drawTriangle(268, 36, 292, 36, 280, 58, color);
+    }
+  }
 
   static void drawAngerMark(M5Canvas* spi, uint16_t color, uint32_t now) {
     constexpr int16_t cx = 275;
