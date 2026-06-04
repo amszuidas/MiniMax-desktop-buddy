@@ -22,6 +22,7 @@ function nobleUuid(u: string): string {
 export class BleLink implements BleLinkLike {
   private stateChar: NobleCharacteristic | null = null;
   private eventCb: ((payload: Buffer) => void) | null = null;
+  private connectCb: (() => void) | null = null;
   private stopped = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- noble has no types
   private noble: any = null;
@@ -42,6 +43,11 @@ export class BleLink implements BleLinkLike {
 
   onEvent(cb: (payload: Buffer) => void): void {
     this.eventCb = cb;
+  }
+
+  /** Called each time the device connects (initial or reconnect). */
+  onConnect(cb: () => void): void {
+    this.connectCb = cb;
   }
 
   private async run(): Promise<void> {
@@ -76,6 +82,7 @@ export class BleLink implements BleLinkLike {
         });
         // eslint-disable-next-line no-console
         console.log('[ble] connected to MmxBuddy');
+        this.connectCb?.();
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[ble] connect failed, rescanning:', String(err));

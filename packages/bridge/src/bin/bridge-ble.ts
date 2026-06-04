@@ -36,11 +36,24 @@ async function main(): Promise<void> {
   });
 
   adapter.bind();
+  ble.onConnect(() => {
+    void controller.syncRunning();            // refresh running count on (re)connect
+    adapter.handleState(controller.state());  // push current state immediately
+  });
   console.log(`Bridge(BLE) starting. daemon=127.0.0.1:${port}, scanning for ${BLE_DEVICE_NAME} …`);
   client.start();
   ble.start();
 
-  process.on('SIGINT', () => { ble.stop(); client.stop(); process.exit(0); });
+  // Periodic running resync — covers an idle daemon (no SSE events) so the
+  // pet's running count stays accurate without relying on lifecycle events.
+  const runningTimer = setInterval(() => { void controller.syncRunning(); }, 15000);
+
+  process.on('SIGINT', () => {
+    clearInterval(runningTimer);
+    ble.stop();
+    client.stop();
+    process.exit(0);
+  });
 }
 
 void main();
