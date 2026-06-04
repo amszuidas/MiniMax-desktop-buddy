@@ -4,6 +4,7 @@
 #include "pet_state.h"
 #include "pet_render.h"
 #include "shake_detect.h"
+#include "vibration.h"
 #include "ble_peripheral.h"
 #include <FastLED.h>
 
@@ -14,6 +15,7 @@ buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
 ShakeDetector shake;
 buddy::Vibration lastVibration = buddy::Vibration::None;
+buddy::VibrationPlayer vibPlayer;
 buddy_ble::BlePeripheral ble;
 int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它发事件
 #define RGB_PIN 32        // Grove Port A 数据脚
@@ -21,6 +23,17 @@ int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它
 CRGB leds[RGB_COUNT];
 
 void fillLeds(const CRGB& c) { for (int i = 0; i < RGB_COUNT; i++) leds[i] = c; }
+
+buddy::VibrationPattern toVibPattern(buddy::Vibration v) {
+  switch (v) {
+    case buddy::Vibration::Buzz:      return buddy::VibrationPattern::Buzz;
+    case buddy::Vibration::DoubleTap: return buddy::VibrationPattern::DoubleTap;
+    case buddy::Vibration::LongBuzz:  return buddy::VibrationPattern::LongBuzz;
+    case buddy::Vibration::Pulse:     return buddy::VibrationPattern::Pulse;
+    case buddy::Vibration::None:      return buddy::VibrationPattern::None;
+  }
+  return buddy::VibrationPattern::None;
+}
 
 void renderLed(buddy::Led led, uint32_t now) {
   switch (led) {
@@ -90,18 +103,12 @@ void loop() {
     avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
   }
-  // TODO: 这些 delay() 阻塞主循环最长 ~400ms(LongBuzz)。BLE 下更紧迫——
-  // 期间会丢按键/IMU/BLE state 写入。后续改非阻塞(millis 状态机或 FreeRTOS timer)。
+  // 非阻塞振动:种类变化时载入脚本;每帧按 now 输出强度(零 delay)。
   if (v.vibration != lastVibration) {
-    switch (v.vibration) {
-      case buddy::Vibration::Buzz:      M5.Power.setVibration(180); delay(120); M5.Power.setVibration(0); break;
-      case buddy::Vibration::DoubleTap: M5.Power.setVibration(160); delay(80);  M5.Power.setVibration(0); delay(80); M5.Power.setVibration(160); delay(80); M5.Power.setVibration(0); break;
-      case buddy::Vibration::LongBuzz:  M5.Power.setVibration(220); delay(400); M5.Power.setVibration(0); break;
-      case buddy::Vibration::Pulse:     M5.Power.setVibration(140); delay(100); M5.Power.setVibration(0); break;
-      case buddy::Vibration::None:      M5.Power.setVibration(0); break;
-    }
+    vibPlayer.play(toVibPattern(v.vibration), now);
     lastVibration = v.vibration;
   }
+  M5.Power.setVibration(vibPlayer.update(now));
   renderLed(v.led, now);
   delay(16);
 }
