@@ -95,4 +95,12 @@ describe('Controller', () => {
     await expect(c.decide(localId, 'allowOnce')).rejects.toThrow('network down');
     expect(c.state().p).toBe(1);
   });
+
+  it('emits a state with e=1 shortly after a session.error event', () => {
+    const fake = makeFakeClient();
+    const states: Array<{ e?: 0 | 1 }> = [];
+    const c = new Controller(fake.client as never, { onState: (s) => states.push(s) });
+    c.ingest({ type: 'session.error', timestamp: Date.now(), source: 's', payload: { sessionId: 'mvs_1', error: 'boom' } });
+    expect(states.some((s) => s.e === 1)).toBe(true);
+  });
 });

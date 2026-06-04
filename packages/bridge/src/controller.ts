@@ -25,7 +25,7 @@ export class Controller {
   constructor(private readonly client: ClientLike, private readonly opts: ControllerOptions) {}
 
   state(): BuddyState {
-    return this.model.getState();
+    return this.model.getState(Date.now());
   }
 
   /** The full, un-truncated currently-surfaced approval (for rich UIs), or null. */
@@ -66,6 +66,6 @@ export class Controller {
   }
 
   private emit(): void {
-    this.opts.onState(this.model.getState());
+    this.opts.onState(this.model.getState(Date.now()));
   }
 }

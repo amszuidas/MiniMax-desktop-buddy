@@ -129,4 +129,20 @@ describe('StateModel', () => {
     m.setConnected(true);
     expect(m.currentApproval()).toBeNull();
   });
+
+  it('session.error sets a transient error flag e=1 then clears after the window', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    m.applyEvent({ type: 'session.start', timestamp: 1, source: 's', payload: { sessionId: 'mvs_1' } });
+    m.applyEvent({ type: 'session.error', timestamp: 1000, source: 's', payload: { sessionId: 'mvs_1', error: 'boom' } });
+    expect(m.getState(1200).e).toBe(1);
+    expect(m.getState(1200).r).toBe(0);
+    expect(m.getState(1000 + 3000 + 1).e).toBeUndefined();
+  });
+
+  it('getState() defaults the error flag off', () => {
+    const m = new StateModel();
+    m.setConnected(true);
+    expect(m.getState(500).e).toBeUndefined();
+  });
 });

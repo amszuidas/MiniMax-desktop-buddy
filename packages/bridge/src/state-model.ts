@@ -3,6 +3,7 @@ import type { BuddyState, DaemonEvent, LocalApproval, PendingApproval } from './
 const SESSION_END_TYPES = new Set(['session.finish', 'session.error', 'session.abort']);
 const MAX_DESC = 40;
 const MAX_LABEL = 16;
+const ERROR_FLAG_MS = 3000;
 
 function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max - 1) + '…';
@@ -23,6 +24,7 @@ export class StateModel {
   private pending = new Map<string, PendingApproval & { localId: number }>();
   private byLocalId = new Map<number, string>();
   private nextLocalId = 1;
+  private errorUntil = 0;
 
   setConnected(c: boolean): void {
     this.connected = c;
@@ -34,6 +36,8 @@ export class StateModel {
       this.running.add(sid);
     } else if (SESSION_END_TYPES.has(ev.type) && sid) {
       this.running.delete(sid);
+      // session.error additionally lights a transient error flag for the device's Angry face.
+      if (ev.type === 'session.error') this.errorUntil = ev.timestamp + ERROR_FLAG_MS;
     } else if (ev.type === 'permission.ask') {
       this.addPending(this.eventToApproval(ev));
     }
@@ -71,7 +75,7 @@ export class StateModel {
     return first.done ? null : first.value;
   }
 
-  getState(): BuddyState {
+  getState(now = 0): BuddyState {
     const first = this.pending.values().next();
     const a = first.done
       ? null
@@ -81,13 +85,18 @@ export class StateModel {
           d: truncate(first.value.toolInput ?? first.value.toolDescription ?? '', MAX_DESC),
           s: truncate(first.value.sessionId, MAX_LABEL),
         };
-    return {
+    const state: BuddyState = {
       v: 1,
       c: this.connected ? 1 : 0,
       r: this.running.size,
       p: this.pending.size,
       a,
     };
+    // error flag is transient: only set while within the window (wrap-safe compare)
+    if (this.errorUntil !== 0 && now !== 0 && (now - this.errorUntil) < 0) {
+      state.e = 1;
+    }
+    return state;
   }
 
   private eventToApproval(ev: DaemonEvent): PendingApproval {
