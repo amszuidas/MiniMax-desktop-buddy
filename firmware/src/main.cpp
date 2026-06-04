@@ -6,9 +6,12 @@
 #include "shake_detect.h"
 #include "vibration.h"
 #include "ble_peripheral.h"
+#include "buddy_face.h"
+#include "buddy_fx.h"
 #include <FastLED.h>
 
 using namespace m5avatar;
+using namespace buddy_face;
 
 Avatar avatar;
 buddy::PetStateMachine sm;
@@ -18,6 +21,10 @@ buddy::Vibration lastVibration = buddy::Vibration::None;
 buddy::VibrationPlayer vibPlayer;
 buddy_ble::BlePeripheral ble;
 int lastApprovalId = 0;  // 当前 BLE 状态里的审批 id(0=无),按键用它发事件
+m5avatar::Face* buddyFace = nullptr;
+bool dizzyEyesOn = false;
+uint32_t lastRemindMs = 0;
+int lastPendingForRelief = 0;
 #define RGB_PIN 32        // Grove Port A 数据脚
 #define RGB_COUNT 3       // Unit RGB 板载 3 颗
 CRGB leds[RGB_COUNT];
@@ -55,6 +62,9 @@ void setup() {
   M5.begin(cfg);
   M5.Display.setBrightness(120);
   avatar.init();
+  buddyFace = makeBuddyFace();
+  avatar.setFace(buddyFace);
+  avatar.setExpression(m5avatar::Expression::Neutral);  // base face stays Neutral; symbols drawn by BuddyEffect
   // ⚠️ Core2 默认不给 Grove 5V 供电,必须显式打开,否则 Unit RGB 不亮
   M5.Power.setExtOutput(true);
   FastLED.addLeds<WS2812, RGB_PIN, GRB>(leds, RGB_COUNT);
@@ -80,6 +90,11 @@ void loop() {
   sm.setInputs(ps.inputs);
   lastApprovalId = (ble.isConnected() && ps.hasApproval) ? ps.approvalId : 0;
 
+  // Relief edge: pending goes from >0 to 0 → trigger "sigh of relief" transient.
+  int curPendingForRelief = (lastApprovalId > 0) ? 1 : 0;
+  if (lastPendingForRelief > 0 && curPendingForRelief == 0) sm.onApprovalsCleared(now);
+  lastPendingForRelief = curPendingForRelief;
+
   // session.error → Angry 脸(error 标志是 Mac 侧瞬态;latch 只在上升沿触发一次)
   static bool errorLatch = false;
   if (ble.isConnected() && ps.hasError) {
@@ -98,8 +113,15 @@ void loop() {
   }
 
   buddy::PetVisual v = sm.update(now);
+  // Feed self-drawn effect shared state (avatar render thread reads g_buddyFx for symbols).
+  g_buddyFx.expr = v.expression;
+  g_buddyFx.intensity = v.intensity;
+  g_buddyFx.nowMs = now;
+  // Dizzy enter/exit: swap to spiral eyes (only on change).
+  const bool wantDizzy = (v.expression == buddy::Expression::Dizzy);
+  if (wantDizzy != dizzyEyesOn) { setDizzyEyes(buddyFace, wantDizzy); dizzyEyesOn = wantDizzy; }
+  // Speech bubble text still updated (text fallback to distinguish states).
   if (v.expression != lastExpression) {
-    applyExpression(avatar, v.expression);
     avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
   }
@@ -107,6 +129,17 @@ void loop() {
   if (v.vibration != lastVibration) {
     vibPlayer.play(toVibPattern(v.vibration), now);
     lastVibration = v.vibration;
+  }
+  // Periodic approval reminder: when connected + pending, re-buzz every kRemindIntervalMs.
+  constexpr uint32_t kRemindIntervalMs = 6000;
+  if (ble.isConnected() && lastApprovalId > 0) {
+    if (lastRemindMs == 0) lastRemindMs = now;
+    else if (static_cast<int32_t>(now - (lastRemindMs + kRemindIntervalMs)) >= 0) {
+      vibPlayer.play(buddy::VibrationPattern::Pulse, now);
+      lastRemindMs = now;
+    }
+  } else {
+    lastRemindMs = 0;
   }
   M5.Power.setVibration(vibPlayer.update(now));
   renderLed(v.led, now);
