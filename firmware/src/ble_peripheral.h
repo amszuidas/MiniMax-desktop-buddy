@@ -3,7 +3,7 @@
 #include <NimBLEDevice.h>
 #include "ble_protocol.h"
 
-// NimBLE peripheral 封装:广播 + State 写回调 + Event 通知。
+// NimBLE peripheral 封装:广播 + State 写回调(加密)+ Event indication(加密链路)。
 namespace buddy_ble {
 
 class BlePeripheral {
@@ -22,6 +22,11 @@ class BlePeripheral {
         kStateUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC);
     stateChar_->setCallbacks(&stateCb_);
 
+    // Event = 设备→Mac 的审批事件,用 INDICATE(带确认,审批不丢)。
+    // 加密说明:NimBLE 无 INDICATE_ENC;indication 的加密继承自 bonded link
+    //（Mac 先 WRITE_ENC 写 State 触发配对 → 链路已加密后 indication 才流动)。
+    // READ_ENC 仅护直接 ATT Read,不强制 indication 订阅方加密——真板需验证
+    // 未绑定客户端不能订到明文事件(见 M3-followups / Task9)。
     eventChar_ = svc->createCharacteristic(
         kEventUuid, NIMBLE_PROPERTY::INDICATE | NIMBLE_PROPERTY::READ_ENC);
 

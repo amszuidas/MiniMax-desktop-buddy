@@ -54,7 +54,7 @@ struct PetVisual {
 constexpr uint32_t kShakeMs = 2000;
 constexpr uint32_t kApproveMs = 1500;
 constexpr uint32_t kDenyMs = 1500;
-constexpr uint32_t kErrorMs = 2000;
+constexpr uint32_t kErrorMs = 3000;
 
 /**
  * 宠物状态机。喂稳态输入 + 瞬态事件(带触发时刻),update(now) 计算当前
