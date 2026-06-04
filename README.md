@@ -1,56 +1,50 @@
 # MiniMax Desktop Buddy
 
-Desktop AI-companion hardware for MiniMax Code. See `docs/` (in the MiniMax Code repo)
-for the full design spec.
+Desktop AI-companion hardware for MiniMax Code: an M5Stack Core2 shows a pet that
+reflects your live MiniMax Code session/approval state over BLE, and its buttons
+**approve or deny real tool calls** on the daemon. See `docs/` (in the MiniMax
+Code repo) for the full design spec.
+
+**Status:** M0 (Mac bridge) ✅ · M1 (Core2 firmware) ✅ · M2 (BLE bidirectional)
+✅ — all verified on real hardware. The core product works end-to-end.
 
 ## Packages
-- `packages/bridge` — Mac-side bridge: subscribes to the MiniMax Code daemon SSE
-  stream, derives Buddy state, relays approvals. (M0: terminal-only, no hardware.)
+- `packages/bridge` — Mac-side bridge (Node/TS): subscribes to the MiniMax Code
+  daemon SSE stream, derives Buddy state, relays it to the device over BLE, and
+  turns device button presses into real `batch-reply` approval decisions.
+- `firmware/` — M5Stack Core2 firmware (PlatformIO): NimBLE peripheral + pet
+  state machine + avatar/IMU/vibration/RGB. See `firmware/README.md`.
 
-## Quick start (M0)
+## Quick start
 ```bash
 pnpm install
-pnpm bridge      # connect to a running daemon, print state, approve via keypress
-pnpm ble-probe   # verify @abandonware/noble works on this Mac
+
+# M2 — full product: pet driven by real daemon state over BLE, buttons approve/deny.
+# Requires a flashed Core2 (see firmware/README.md) + a running MiniMax Code daemon.
+pnpm --filter @buddy/bridge bridge:ble
+
+# M0 — terminal-only bridge (no hardware): approve/deny from the keyboard.
+pnpm --filter @buddy/bridge bridge
+
+# verify @abandonware/noble works on this Mac
+pnpm --filter @buddy/bridge ble-probe
 ```
 
 By default the bridge reads the daemon's port from `~/.mavis/daemon.port` (the
 daemon's standard data dir). For a non-default profile (e.g. a worktree daemon
 whose data dir is `~/.mavis-<profile>`), point the bridge at it:
 ```bash
-BUDDY_DATA_DIR=~/.mavis-<profile> pnpm bridge   # override data dir
-BUDDY_DAEMON_PORT=15321 pnpm bridge             # or pin the port directly
+BUDDY_DATA_DIR=~/.mavis-<profile> pnpm --filter @buddy/bridge bridge:ble
+BUDDY_DAEMON_PORT=15321 pnpm --filter @buddy/bridge bridge:ble
 ```
 
-## M0 status (bridge, no hardware)
-
-Implemented and verified:
-- `pnpm test` — 25 unit tests (sse-parse, daemon-port, state-model, controller)
-- `pnpm ble-probe` — **verified**: `@abandonware/noble` reaches `poweredOn` and
-  scans on this Mac (saw 274 BLE peripherals, exit 0). This retires the project's
-  biggest risk — the Node+noble (B1) path for BLE transport is viable; no Swift
-  fallback needed.
-- `pnpm bridge` — **verified** end-to-end: resolves the real daemon port from
-  `~/.mavis/daemon.port`, connects over SSE, lists pending approvals, and
-  approves & denies REAL tool calls from the terminal (allow once / allow
-  always / deny).
-
-> **Known M0 limitation:** the running-session count (`r`) is derived purely from
-> SSE lifecycle events, so sessions already running when the bridge connects are
-> not counted, and the count can drift across SSE drops. The pending-approval
-> path resyncs on every reconnect and is unaffected. See `docs/M0-followups.md`.
-
-### Manual acceptance: live approve/deny round-trip
-With a MiniMax Code daemon running on this Mac:
-1. `pnpm bridge` → the box should show `daemon: CONNECTED` within ~2s.
-2. In MiniMax Code, trigger a tool call that needs approval (e.g. a `bash`
-   command). The box flips to `▶ APPROVAL #1 [bash] …`.
-3. Press `a` (allow once). The agent proceeds and the box returns to
-   `(no pending approvals)`.
-
-Next milestones (separate plans):
-- M1 firmware "pet hello" — **code complete** (pending on-device verification):
-  pet state machine (12 native tests) + avatar/buttons/IMU/vibration/RGB adapter
-  compiles for Core2. See `firmware/`.
-- M2 BLE GATT transport (device = peripheral, Mac = central)
-- M3 integration (real daemon state → pet animation; buttons → real approvals)
+## Milestones
+- **M0 — Mac bridge** ✅ verified: resolves the daemon port, connects over SSE,
+  lists pending approvals, approves/denies REAL tool calls from the terminal.
+- **M1 — Core2 firmware "pet hello"** ✅ verified on hardware: pet state machine
+  (native-tested) + avatar/buttons/IMU/vibration/RGB. See `firmware/`.
+- **M2 — BLE bidirectional** ✅ verified on hardware: device = NimBLE peripheral,
+  Mac = noble central; daemon state → pet over BLE, device buttons → real
+  approvals. See `firmware/README.md` + `M2-followups.md`.
+- **M3 / M4 (next)** — harden BLE (bonding/whitelist, reconnect backoff,
+  session.error→error face); bespoke pet animations; non-blocking vibration.

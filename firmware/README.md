@@ -62,7 +62,34 @@ real daemon `session.error` event in M2.
   real daemon `session.error` event in M2/M3. (`deny`/`Sad` is now reachable via
   BtnC.) See `M1-followups.md`.
 
-## Next: M2 — replace button-simulated inputs with real BLE BuddyState
-The state machine input (`buddy::PetInputs`) is already the BLE contract shape
-(connected / runningSessions / pendingApprovals). M2 swaps the button simulation
-in `loop()` for a BLE GATT peripheral fed by the Mac bridge.
+## M2 status — ✅ BLE bidirectional (verified on hardware, 2026-06-04)
+The pet is now driven by **real daemon state** over BLE, and device buttons make
+**real approval decisions** on the daemon.
+- Device = NimBLE peripheral (`MmxBuddy`): receives State (Mac writes the daemon
+  snapshot), notifies approval Events on button press. Fail-safe: shows `zzz`
+  (disconnected) until a Mac central connects, and reverts if the central drops.
+- Mac = noble central: `pnpm --filter @buddy/bridge bridge:ble` — pushes daemon
+  state to the device and relays device button presses to real `batch-reply`
+  decisions (the device only ever sends a small local id; the real requestId
+  never leaves the Mac).
+- Device controls (only active when an approval is pending):
+  - **BtnB tap** → approve once · **BtnB hold** → approve always
+  - **BtnA tap** → deny
+  - Shake → `dizzy` (local IMU, not over BLE)
+- Protocol codec is a shared contract: TS `ble-protocol.ts` (native-tested) and
+  C++ `ble_protocol.h` (field-for-field identical), exercised end-to-end on device.
+- **Verified end-to-end on real hardware:** Mac connects to `MmxBuddy`, pet
+  reflects live running-session count, and pressing the device button actually
+  approved/denied real MiniMax Code tool calls.
+
+## Known M2 limitations (see M2-followups.md)
+- Connects by advertised name `MmxBuddy`; no BLE bonding/whitelist yet (M3).
+- `error` (Angry) face still has no trigger — needs the M0 bridge to expose
+  `session.error` over the contract first.
+- noble link has no reconnect backoff; `stop()` doesn't disconnect the peripheral
+  (SIGINT→exit covers it for now). See M2-followups.md.
+
+## Next: M3 / M4
+- M3: harden — BLE bonding + device whitelist; reconnect backoff; session.error path.
+- M4: bespoke pet animations (spiral-eyes, hearts); periodic pending reminder;
+  non-blocking vibration.
