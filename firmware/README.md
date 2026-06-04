@@ -86,6 +86,14 @@ The pet is now driven by **real daemon state** over BLE, and device buttons make
 - Connects by advertised name `MmxBuddy`; no BLE bonding/whitelist yet (M3).
 - `error` (Angry) face still has no trigger — needs the M0 bridge to expose
   `session.error` over the contract first.
+- No state re-push on BLE (re)connect: after an idle reconnect (Mac sleep/wake,
+  device out of range), the pet can sit on `zzz` until the next non-heartbeat
+  daemon event. M3 adds a BleLink onConnect → re-push.
+- No explicit MTU negotiation: `approve`/`always` events rely on the central
+  negotiating a large MTU (macOS does); at the default 23-byte MTU they would be
+  truncated. M3 sets an explicit MTU + switches Event to acknowledged indications.
+- `running` count only reflects sessions that start *after* the bridge connects
+  (inherited M0 drift); not resynced on connect. M3 adds a running-sessions snapshot.
 - noble link has no reconnect backoff; `stop()` doesn't disconnect the peripheral
   (SIGINT→exit covers it for now). See M2-followups.md.
 
