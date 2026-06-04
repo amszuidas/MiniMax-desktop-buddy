@@ -59,18 +59,21 @@ void loop() {
     if (shake.feed(ax, ay, az, now)) sm.onShake(now);
   }
 
-  // BLE 状态 → 状态机输入。未连接 central 或没收到状态时,inputs 默认
-  // connected=false → 失效安全显示"未连接"。
+  // BLE 状态 → 状态机输入。未连接 central 或没收到状态时,显示"未连接"。
+  // 关键:central 断连后 latestState() 仍返回旧快照,必须用 isConnected() 覆盖,
+  // 否则 Mac 休眠/超距后宠物会一直显示"已连接 + 幽灵审批"。
   buddy_ble::ParsedState ps = ble.latestState();
+  if (!ble.isConnected()) ps.inputs.connected = false;
   sm.setInputs(ps.inputs);
-  lastApprovalId = ps.hasApproval ? ps.approvalId : 0;
+  lastApprovalId = (ble.isConnected() && ps.hasApproval) ? ps.approvalId : 0;
 
-  // 三键 → 发真实审批事件(仅当有待审批时)。
-  // BtnB 轻按=批准一次,长按=永久批准;BtnA=拒绝。
+  // 三键 → 发真实审批事件(仅当有待审批时)。本地立即播放瞬态动画(乐观 UI:
+  // 在 Mac 确认前先动画;若 daemon 拒绝,下一次 BLE 状态推送会纠正)。
+  // wasHold 先判:长按=永久批准,不被误判为轻按;else-if 防同帧双发。
   if (lastApprovalId > 0) {
-    if (M5.BtnB.wasClicked()) { ble.sendEvent("approve", lastApprovalId); sm.onApprove(now); }
-    if (M5.BtnB.wasHold())    { ble.sendEvent("always",  lastApprovalId); sm.onApprove(now); }
-    if (M5.BtnA.wasClicked()) { ble.sendEvent("deny",    lastApprovalId); sm.onDeny(now); }
+    if (M5.BtnB.wasHold())         { ble.sendEvent("always",  lastApprovalId); sm.onApprove(now); }
+    else if (M5.BtnB.wasClicked()) { ble.sendEvent("approve", lastApprovalId); sm.onApprove(now); }
+    if (M5.BtnA.wasClicked())      { ble.sendEvent("deny",    lastApprovalId); sm.onDeny(now); }
   }
 
   buddy::PetVisual v = sm.update(now);
@@ -79,8 +82,8 @@ void loop() {
     avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
   }
-  // TODO(M2): 这些 delay() 会阻塞主循环最长 ~400ms(LongBuzz),期间丢按键/IMU。
-  // 后续改为非阻塞(millis 状态机或 FreeRTOS timer)。
+  // TODO: 这些 delay() 阻塞主循环最长 ~400ms(LongBuzz)。BLE 下更紧迫——
+  // 期间会丢按键/IMU/BLE state 写入。后续改非阻塞(millis 状态机或 FreeRTOS timer)。
   if (v.vibration != lastVibration) {
     switch (v.vibration) {
       case buddy::Vibration::Buzz:      M5.Power.setVibration(180); delay(120); M5.Power.setVibration(0); break;
