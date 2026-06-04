@@ -6,6 +6,7 @@
 #include "vibration.h"
 #include "ble_peripheral.h"
 #include "buddy_face.h"
+#include "buddy_avatar_palette.h"
 #include "buddy_fx.h"
 #include "face_drive.h"
 #include <FastLED.h>
@@ -16,6 +17,7 @@ using namespace buddy_face;
 Avatar avatar;
 buddy::PetStateMachine sm;
 buddy::Expression lastExpression = buddy::Expression::Neutral;
+bool paletteInitialized = false;
 ShakeDetector shake;
 buddy::Vibration lastVibration = buddy::Vibration::None;
 buddy::VibrationPlayer vibPlayer;
@@ -152,10 +154,12 @@ void loop() {
   const bool wantBlink = (v.expression == buddy::Expression::Neutral);
   if (wantBlink != autoBlinkOn) { avatar.setIsAutoBlink(wantBlink); autoBlinkOn = wantBlink; }
   // Speech bubble text still updated (text fallback to distinguish states).
-  if (v.expression != lastExpression) {
+  if (!paletteInitialized || v.expression != lastExpression) {
+    applyBuddyPalette(avatar, v.expression);
     avatar.setExpression(baseLibExpression(v.expression));
     avatar.setSpeechText(buddy::expressionLabel(v.expression));
     lastExpression = v.expression;
+    paletteInitialized = true;
   }
   // 非阻塞振动:种类变化时载入脚本;每帧按 now 输出强度(零 delay)。
   if (v.vibration != lastVibration) {
