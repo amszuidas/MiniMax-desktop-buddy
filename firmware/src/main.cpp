@@ -67,6 +67,14 @@ void loop() {
   sm.setInputs(ps.inputs);
   lastApprovalId = (ble.isConnected() && ps.hasApproval) ? ps.approvalId : 0;
 
+  // session.error → Angry 脸(error 标志是 Mac 侧瞬态;latch 只在上升沿触发一次)
+  static bool errorLatch = false;
+  if (ble.isConnected() && ps.hasError) {
+    if (!errorLatch) { sm.onSessionError(now); errorLatch = true; }
+  } else {
+    errorLatch = false;
+  }
+
   // 三键 → 发真实审批事件(仅当有待审批时)。本地立即播放瞬态动画(乐观 UI:
   // 在 Mac 确认前先动画;若 daemon 拒绝,下一次 BLE 状态推送会纠正)。
   // wasHold 先判:长按=永久批准,不被误判为轻按;else-if 防同帧双发。
