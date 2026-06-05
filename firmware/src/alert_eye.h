@@ -3,7 +3,9 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_layout.h"
 #include "buddy_palette.h"
+#include "concept_eye_geometry.h"
 
 // AlertEye -- replaces the default Eye Drawable when Doubt (approval pending).
 // A wide alert eye: large open eye with a small pupil that subtly pulses, plus a
@@ -21,26 +23,27 @@ class AlertEye : public m5avatar::Drawable {
     buddy_render::BuddyPalette p =
         buddy_render::paletteFor(buddy::Expression::Doubt);
     uint16_t color = p.primary;
-    uint16_t bg = p.face;
+    uint16_t sclera = p.balloonBg;
     uint16_t pupil = p.accent;
 
-    int16_t cx = rect.getCenterX();
-    int16_t cy = rect.getCenterY();
+    buddy_render::ConceptExpressionLayout l =
+        buddy_render::conceptLayoutFor(buddy::Expression::Doubt);
+    int16_t cx = buddy_face::conceptEyeX(isLeft_);
+    int16_t cy = buddy_face::conceptEyeY();
 
-    // Wide-open eye: a big filled circle (the eye), with a smaller background
-    // circle punched out and a pulsing pupil in the middle -> "staring at you".
-    constexpr int16_t eyeR = 17;
-    spi->fillCircle(cx, cy, eyeR, color);          // eye outline mass
-    spi->fillCircle(cx, cy, eyeR - 3, bg);         // white of the eye
+    int16_t eyeR = l.eyeRadius;
+    spi->fillEllipse(cx, cy, eyeR, eyeR + 3, color);
+    spi->fillEllipse(cx, cy, eyeR - 4, eyeR - 1, sclera);
     // Pupil pulses small<->slightly-bigger so it feels alert/alive.
-    int16_t pupilR = 6 + (int16_t)(2.0f * fabsf(sinf(g_buddyFx.nowMs / 280.0f)));
-    spi->fillCircle(cx, cy, pupilR, pupil);
+    int16_t pupilR = 7 + (int16_t)(2.0f * fabsf(sinf(g_buddyFx.nowMs / 280.0f)));
+    spi->fillEllipse(cx, cy + 2, pupilR, pupilR + 2, pupil);
+    spi->fillCircle(cx - 8, cy - 10, 4, sclera);
 
     // Slanted brow line above the eye: inner end high, outer end low (frown).
     // Mirror by isLeft so both brows tilt toward the face center.
-    constexpr int16_t browLen = 26;
-    constexpr int16_t browY = 22;   // above the eye center
-    constexpr int16_t browDrop = 9; // vertical slant
+    constexpr int16_t browLen = 40;
+    constexpr int16_t browY = 32;
+    constexpr int16_t browDrop = 12;
     int16_t inner = isLeft_ ? cx + browLen / 2 : cx - browLen / 2;
     int16_t outer = isLeft_ ? cx - browLen / 2 : cx + browLen / 2;
     int16_t innerY = cy - browY;            // inner end high

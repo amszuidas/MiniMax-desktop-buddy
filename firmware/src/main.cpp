@@ -59,16 +59,11 @@ void renderLed(buddy::Led led, uint32_t now) {
   FastLED.show();
 }
 
-// 底脸库表情:Love/Happy/Dizzy/Sleepy 用 Neutral(符号由 BuddyEffect 自绘);
-// Sad/Angry/Doubt 用库对应表情保住可读性。注:Doubt/Sad 现在 BuddyEffect 也叠了
-// 感叹号/泪滴符号(Angry 仍靠库脸),与库底脸是否视觉重叠待真板评估(见 M4-notes)。
+// 底脸库统一 Neutral:五官和情绪符号都由关键帧风格自绘层接管,避免默认库表情
+// 与设计稿冲突。
 m5avatar::Expression baseLibExpression(buddy::Expression e) {
-  switch (e) {
-    case buddy::Expression::Sad:   return m5avatar::Expression::Sad;
-    case buddy::Expression::Angry: return m5avatar::Expression::Angry;
-    case buddy::Expression::Doubt: return m5avatar::Expression::Doubt;
-    default:                       return m5avatar::Expression::Neutral; // Neutral/Happy/Dizzy/Love/Sleepy
-  }
+  (void)e;
+  return m5avatar::Expression::Neutral;
 }
 
 void setup() {
@@ -136,28 +131,22 @@ void loop() {
   g_buddyFx.nowMs = now;
   // Drive exaggerated face params every frame (rotation/scale/eye/mouth/breath per expression).
   driveFace(avatar, v.expression, v.intensity, now);
-  // Per-expression custom eyes: spiral for Dizzy, heart for Love, alert for
-  // Doubt, else default. setEyeKind() guards against redundant swaps internally.
-  EyeKind wantEye = EyeKind::Default;
-  if (v.expression == buddy::Expression::Dizzy) wantEye = EyeKind::Spiral;
+  // Every expression uses concept-sheet eyes. setEyeKind() guards redundant swaps.
+  EyeKind wantEye = EyeKind::Idle;
+  if (v.expression == buddy::Expression::Sleepy) wantEye = EyeKind::Sleepy;
+  else if (v.expression == buddy::Expression::Dizzy) wantEye = EyeKind::Spiral;
   else if (v.expression == buddy::Expression::Love) wantEye = EyeKind::Heart;
   else if (v.expression == buddy::Expression::Doubt) wantEye = EyeKind::Alert;
   else if (v.expression == buddy::Expression::Happy) wantEye = EyeKind::Busy;
   else if (v.expression == buddy::Expression::Sad) wantEye = EyeKind::Sad;
   else if (v.expression == buddy::Expression::Angry) wantEye = EyeKind::Angry;
   setEyeKind(buddyFace, wantEye);
-  // Neutral restores library auto-blink for idle liveliness; every other
-  // expression owns its eyes (custom Drawable or fixed ratio), so blink stays
-  // off for them. driveFace's Neutral branch intentionally leaves eyeOpenRatio
-  // alone so the library blink task drives it.
-  static bool autoBlinkOn = false;  // matches setup()'s setIsAutoBlink(false)
-  const bool wantBlink = (v.expression == buddy::Expression::Neutral);
-  if (wantBlink != autoBlinkOn) { avatar.setIsAutoBlink(wantBlink); autoBlinkOn = wantBlink; }
-  // Speech bubble text still updated (text fallback to distinguish states).
+  // The keyframe art owns blinking and mouth motion; library speech bubbles are
+  // intentionally hidden so they do not cover the approved compositions.
   if (!paletteInitialized || v.expression != lastExpression) {
     applyBuddyPalette(avatar, v.expression);
     avatar.setExpression(baseLibExpression(v.expression));
-    avatar.setSpeechText(buddy::expressionLabel(v.expression));
+    avatar.setSpeechText("");
     lastExpression = v.expression;
     paletteInitialized = true;
   }

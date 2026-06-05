@@ -23,8 +23,8 @@ pio run -e m5stack-core2 -t upload -t monitor
 ```
 
 ## M1 controls (demo interaction, until BLE lands in M2)
-Each state shows a face **and** a speech-bubble label (bottom-right) so states
-stay distinguishable even where two states share a built-in avatar face.
+Each state now uses colorful keyframe-style expression art; speech-bubble labels
+are hidden so the artwork is not covered.
 - **BtnB (center): one-button scenario cycle** — `idle` → `busy` → `approve?`
   → `zzz` (disconnected) → back to `idle`. Mutually exclusive, no stacking.
 - **BtnA (left): approve animation** — `approved` (heart) + double buzz.
@@ -39,7 +39,7 @@ real daemon `session.error` event in M2.
   millis-wrap-safe timing, per-state labels, demo-scenario cycle). Host-run.
 - `pio run -e m5stack-core2` — firmware compiles. Requires `-std=gnu++2a`
   (designated initializers); set in the core2 env.
-- **On-device: all 8 faces + labels, scenario cycle, approve/deny, shake, and
+- **On-device: all 8 faces, scenario cycle, approve/deny, shake, and
   vibration confirmed on a physical Core2.** RGB effects require the Unit RGB
   module (Grove Port A); verify when that module is attached.
 
@@ -53,11 +53,8 @@ real daemon `session.error` event in M2.
   button/IMU polling. M2 moves to non-blocking vibration.
 - `Vibration::Pulse` (pending) fires once on entry, not periodically — periodic
   reminder is an M4 polish item.
-- `Dizzy`/`Love` use the nearest built-in avatar faces (Doubt/Happy) as interim
-  approximations; the speech-bubble label disambiguates them. Bespoke
-  spiral-eyes / floating-hearts come in M4.
-- Speech bubble position is fixed bottom-right by the m5stack-avatar library
-  (`Balloon.h` hard-codes cx=240/cy=220); not configurable without forking.
+- Historical M1 note: early builds used built-in avatar faces plus speech bubbles
+  as labels. The current render layer uses bespoke expression art instead.
 - `error` (Angry) face has **no trigger source in M1** — it only fires from a
   real daemon `session.error` event in M2/M3. (`deny`/`Sad` is now reachable via
   BtnC.) See `M1-followups.md`.
@@ -111,11 +108,12 @@ The pet is now driven by **real daemon state** over BLE, and device buttons make
 
 ## M4 status — fun polish (verified: native + compile; on-device pending)
 - ✅ `pio test -e native` — non-blocking VibrationPlayer + Drowsy/Relief/sweat-intensity
-  state machine (35 native tests total).
-- ✅ `pio run -e m5stack-core2` — self-drawn effects compile: spiral eyes (Dizzy),
-  floating hearts (approve), sweat (running, scales with session count), Zzz (drowsy),
-  dizzy stars — all via custom Drawable + custom Face (mouth-slot overlay), base face
-  pinned to Neutral so the library's built-in Effect never double-draws.
+  state machine and keyframe layout/palette constraints (47 native tests total).
+- ✅ `pio run -e m5stack-core2` — full-screen self-drawn keyframe scenes compile:
+  large custom eyes for every expression, custom mouths, colored mood backdrops,
+  floating hearts, sweat, Zzz, rain, warning bolts, focus brackets, and dizzy stars.
+  The base face is pinned to Neutral and speech bubbles are hidden so the library
+  does not double-draw over the approved compositions.
 - ✅ Non-blocking vibration — loop never blocks on delay() during a buzz.
 - ✅ Periodic approval reminder — re-buzzes every ~6s while an approval is pending.
 

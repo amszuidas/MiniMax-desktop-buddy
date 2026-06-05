@@ -3,7 +3,9 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_layout.h"
 #include "buddy_palette.h"
+#include "concept_eye_geometry.h"
 
 // HeartEye -- replaces the default Eye Drawable when Love.
 // Draws a solid heart that pulses ("heartbeat") over time using g_buddyFx.nowMs.
@@ -19,21 +21,26 @@ class HeartEye : public m5avatar::Drawable {
     (void)ctx;
     buddy_render::BuddyPalette p =
         buddy_render::paletteFor(buddy::Expression::Love);
-    uint16_t color = p.accent;
+    buddy_render::ConceptExpressionLayout l =
+        buddy_render::conceptLayoutFor(buddy::Expression::Love);
+    int16_t cx = buddy_face::conceptEyeX(rect);
+    int16_t cy = buddy_face::conceptEyeY();
+    int16_t eyeR = l.eyeRadius;
 
-    int16_t cx = rect.getCenterX();
-    int16_t cy = rect.getCenterY();
+    spi->fillEllipse(cx, cy, eyeR, eyeR + 2, p.primary);
+    spi->fillEllipse(cx, cy, eyeR - 4, eyeR - 1, p.balloonBg);
 
     // Heartbeat: radius pulses base..base+amp. |sin| doubles the visual rate.
     // k=260 keeps it a calm, gentle beat (not frantic).
-    constexpr float base = 14.0f;
+    float base = l.eyeRadius - 11.0f;
     constexpr float amp = 3.0f;
     constexpr float k = 260.0f;
     int16_t r = (int16_t)(base + amp * fabsf(sinf(g_buddyFx.nowMs / k)));
 
     // The heart extends further down (tip at cy+1.207r) than up (cy-0.5r), so
     // nudge the center up a touch to keep the tip inside the eye socket.
-    drawSolidHeart(spi, cx, cy - 2, r, color);
+    drawSolidHeart(spi, cx, cy - 3, r, p.accent);
+    spi->fillCircle(cx - 8, cy - 11, 3, p.balloonBg);
   }
 
  private:

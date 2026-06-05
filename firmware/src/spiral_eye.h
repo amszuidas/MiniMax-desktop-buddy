@@ -3,7 +3,9 @@
 #include <cmath>
 #include <Drawable.h>
 #include "buddy_fx.h"
+#include "buddy_layout.h"
 #include "buddy_palette.h"
+#include "concept_eye_geometry.h"
 
 // SpiralEye -- replaces the default Eye Drawable when Dizzy.
 // Draws an Archimedean spiral that rotates over time using g_buddyFx.nowMs.
@@ -17,11 +19,13 @@ class SpiralEye : public m5avatar::Drawable {
     (void)ctx;
     buddy_render::BuddyPalette p =
         buddy_render::paletteFor(buddy::Expression::Dizzy);
-    uint16_t color = p.accent;
-    uint16_t color2 = p.accent2;
+    uint16_t color = p.primary;
+    uint16_t color2 = p.secondary;
 
-    int16_t cx = rect.getCenterX();
-    int16_t cy = rect.getCenterY();
+    buddy_render::ConceptExpressionLayout l =
+        buddy_render::conceptLayoutFor(buddy::Expression::Dizzy);
+    int16_t cx = buddy_face::conceptEyeX(rect);
+    int16_t cy = buddy_face::conceptEyeY();
 
     // Rotation phase: full revolution every ~1.5 s
     float phase = (g_buddyFx.nowMs % 1500u) / 1500.0f * 2.0f * M_PI;
@@ -29,8 +33,8 @@ class SpiralEye : public m5avatar::Drawable {
     // Draw an Archimedean spiral as a series of small filled circles.
     // r = a * theta, theta from 0 to 3*PI (1.5 turns).
     constexpr float maxTheta = 3.0f * M_PI;
-    constexpr int steps = 30;
-    constexpr float a = 2.2f;  // growth rate (pixels per radian)
+    constexpr int steps = 34;
+    float a = (l.eyeRadius - 3.0f) / maxTheta;
 
     for (int i = 0; i <= steps; i++) {
       float t = maxTheta * i / steps;
